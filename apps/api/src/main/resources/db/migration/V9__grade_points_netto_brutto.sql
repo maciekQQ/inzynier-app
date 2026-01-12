@@ -1,0 +1,4 @@
+ALTER TABLE grades
+    ADD COLUMN IF NOT EXISTS points_brutto NUMERIC(10,2),
+    ADD COLUMN IF NOT EXISTS points_netto NUMERIC(10,2);
+

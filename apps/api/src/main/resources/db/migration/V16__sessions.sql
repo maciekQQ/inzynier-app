@@ -1,0 +1,13 @@
+CREATE TABLE sessions (
+    id BIGSERIAL PRIMARY KEY,
+    course_id BIGINT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(20) NOT NULL,
+    tasks_count INT,
+    grading_mode VARCHAR(20) NOT NULL DEFAULT 'PERCENT',
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE tasks ADD COLUMN session_id BIGINT REFERENCES sessions(id);
+ALTER TABLE tasks ADD COLUMN grading_mode VARCHAR(20) DEFAULT 'PERCENT';
+

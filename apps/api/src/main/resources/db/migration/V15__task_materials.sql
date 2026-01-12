@@ -1,0 +1,8 @@
+CREATE TABLE task_materials (
+    id BIGSERIAL PRIMARY KEY,
+    task_id BIGINT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    file_key VARCHAR(500) NOT NULL,
+    original_file_name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
+);
+

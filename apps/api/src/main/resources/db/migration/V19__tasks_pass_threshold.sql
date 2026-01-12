@@ -1,0 +1,4 @@
+ALTER TABLE tasks
+    ADD COLUMN IF NOT EXISTS pass_threshold NUMERIC(10,2);
+
+

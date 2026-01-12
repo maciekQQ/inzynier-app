@@ -1,0 +1,32 @@
+# Node / Next
+node_modules
+.next
+.npm
+.turbo
+
+# Java
+target
+.mvn
+*.log
+
+# OS / IDE
+.DS_Store
+*.iml
+.idea
+.vscode
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist
+build
+
+
+
+
+
+
+
