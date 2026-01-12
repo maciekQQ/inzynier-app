@@ -1,0 +1,12 @@
+[phases.setup]
+nixPkgs = ['jdk17', 'maven']
+
+[phases.build]
+cmds = [
+  'cd apps/api',
+  'mvn clean package -DskipTests'
+]
+
+[phases.start]
+cmd = 'cd apps/api && java -Dserver.port=$PORT -jar target/*.jar'
+
