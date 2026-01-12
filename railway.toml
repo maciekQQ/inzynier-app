@@ -1,0 +1,9 @@
+[build]
+builder = "nixpacks"
+buildCommand = "cd apps/api && ./gradlew build -x test"
+
+[deploy]
+startCommand = "cd apps/api && java -Dserver.port=$PORT -jar build/libs/*.jar"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10
+
