@@ -8,5 +8,5 @@ cmds = ["cd apps/web && npm install"]
 cmds = ["cd apps/web && npm run build"]
 
 [start]
-cmd = "cd apps/web && npm start"
+cmd = "cd apps/web && node .next/standalone/server.js"
 
