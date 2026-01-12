@@ -5,8 +5,12 @@ nixPkgs = ["nodejs_20"]
 cmds = ["cd apps/web && npm install"]
 
 [phases.build]
-cmds = ["cd apps/web && npm run build"]
+cmds = [
+  "cd apps/web && npm run build",
+  "cd apps/web && cp -r public .next/standalone/ || true",
+  "cd apps/web && cp -r .next/static .next/standalone/.next/ || true"
+]
 
 [start]
-cmd = "cd apps/web && node .next/standalone/server.js"
+cmd = "cd apps/web/.next/standalone && node server.js"
 
