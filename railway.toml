@@ -1,9 +1,9 @@
 [build]
 builder = "nixpacks"
-buildCommand = "cd apps/api && ./gradlew build -x test"
+buildCommand = "cd apps/api && mvn clean package -DskipTests"
 
 [deploy]
-startCommand = "cd apps/api && java -Dserver.port=$PORT -jar build/libs/*.jar"
+startCommand = "cd apps/api && java -Dserver.port=$PORT -jar target/*.jar"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
 
