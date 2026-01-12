@@ -82,9 +82,9 @@ public class DataSeeder {
             artifactRepository.save(new Artifact(stage, "Raport PDF", ArtifactType.PDF, 10_000_000L, "pdf"));
 
             // przypisz studentów do kursu
-            userRepository.findByEmail("s1@example.com").ifPresent(u -> courseStudentRepository.save(new CourseStudent(course, u.getId(), "G1", "A001")));
-            userRepository.findByEmail("s2@example.com").ifPresent(u -> courseStudentRepository.save(new CourseStudent(course, u.getId(), "G1", "A002")));
-            userRepository.findByEmail("s3@example.com").ifPresent(u -> courseStudentRepository.save(new CourseStudent(course, u.getId(), "G2", "A003")));
+            userRepository.findByEmail("s1@example.com").ifPresent(u -> courseStudentRepository.save(new ClassGroupStudent(course, u.getId(), "G1", "A001")));
+            userRepository.findByEmail("s2@example.com").ifPresent(u -> courseStudentRepository.save(new ClassGroupStudent(course, u.getId(), "G1", "A002")));
+            userRepository.findByEmail("s3@example.com").ifPresent(u -> courseStudentRepository.save(new ClassGroupStudent(course, u.getId(), "G2", "A003")));
             log.info("Seeded demo course/task/stage/artifact and students assigned");
         } else {
             // Przypisz teachera do wszystkich istniejących kursów (na potrzeby dev)
