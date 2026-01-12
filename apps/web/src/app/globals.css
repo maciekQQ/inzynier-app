@@ -1,0 +1,119 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* :focus-visible {
+  outline: 2px solid #000000;
+  outline-offset: 2px;
+}
+
+body {
+  color: #0f172a;
+  background: #ffffff;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Neutral, czarno-biała baza dla pól edycyjnych */
+input,
+select,
+textarea {
+  border: 1px solid #1f2937;
+  background-color: #ffffff;
+  color: #0f172a;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 14px;
+  line-height: 1.5;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #6b7280;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: #000000;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.12);
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background-color: #f8fafc;
+  color: #9ca3af;
+  border-color: #d1d5db;
+}
+
+/* Kontrast: tryb wysoki 1 (ciemne tło, jasny tekst) */
+html.contrast-high1 body {
+  background: #0b1220;
+  color: #f8fafc;
+}
+html.contrast-high1 .bg-white,
+html.contrast-high1 .bg-slate-50,
+html.contrast-high1 .bg-gray-50 {
+  background-color: #111827 !important;
+}
+html.contrast-high1 .text-slate-900,
+html.contrast-high1 .text-slate-800,
+html.contrast-high1 .text-slate-700,
+html.contrast-high1 .text-gray-900,
+html.contrast-high1 .text-gray-800,
+html.contrast-high1 .text-gray-700 {
+  color: #f8fafc !important;
+}
+html.contrast-high1 .text-slate-600,
+html.contrast-high1 .text-gray-600 {
+  color: #e5e7eb !important;
+}
+html.contrast-high1 .border-slate-200,
+html.contrast-high1 .border-slate-300,
+html.contrast-high1 .border-gray-200,
+html.contrast-high1 .border-gray-300 {
+  border-color: #334155 !important;
+}
+html.contrast-high1 a {
+  color: #a5b4fc;
+}
+
+/* Kontrast: tryb wysoki 2 (czarne tło, żółty tekst) */
+html.contrast-high2 body {
+  background: #000000;
+  color: #fef08a;
+}
+html.contrast-high2 .bg-white,
+html.contrast-high2 .bg-slate-50,
+html.contrast-high2 .bg-gray-50 {
+  background-color: #000000 !important;
+}
+html.contrast-high2 .text-slate-900,
+html.contrast-high2 .text-slate-800,
+html.contrast-high2 .text-slate-700,
+html.contrast-high2 .text-gray-900,
+html.contrast-high2 .text-gray-800,
+html.contrast-high2 .text-gray-700 {
+  color: #fef08a !important;
+}
+html.contrast-high2 .text-slate-600,
+html.contrast-high2 .text-gray-600 {
+  color: #fde68a !important;
+}
+html.contrast-high2 .border-slate-200,
+html.contrast-high2 .border-slate-300,
+html.contrast-high2 .border-gray-200,
+html.contrast-high2 .border-gray-300 {
+  border-color: #fbbf24 !important;
+}
+html.contrast-high2 a {
+  color: #fcd34d;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

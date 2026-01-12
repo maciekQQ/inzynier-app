@@ -1,0 +1,1829 @@
+ "use client";
+
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { API_URL, apiFetch } from "./lib/api";
+
+type LoginState = {
+  email: string;
+  password: string;
+};
+
+type Profile = {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: "ADMIN" | "TEACHER" | "STUDENT";
+};
+
+type Course = { id: number; name: string; title?: string };
+type Task = { id: number; title: string; description?: string };
+type Stage = { id: number; name: string; weightPercent: number };
+type QueueEntry = {
+  id: { artifactId: number; studentId: number };
+  lastRevisionId?: number;
+  studentName?: string;
+  albumNumber?: string;
+  lastRevisionStatus?: string;
+  lastPointsNetto?: number;
+  penaltyPercentApplied?: number;
+  lastSubmittedAt?: string;
+};
+
+type RevisionGrade = {
+  gradeId: number;
+  teacherId: number;
+  points: number | null;
+  comment?: string;
+  createdAt: string;
+  statusAfterGrade: string;
+};
+
+type RevisionHistory = {
+  revisionId: number;
+  createdAt: string;
+  status: string;
+  originalFileName?: string;
+  sizeBytes?: number;
+  grades: RevisionGrade[];
+};
+
+type AdminUserForm = {
+  email: string;
+  password: string;
+  role: "ADMIN" | "TEACHER" | "STUDENT";
+  firstName: string;
+  lastName: string;
+};
+
+type AdminCourseForm = {
+  name: string;
+};
+
+type AdminAssignForm = {
+  courseId: string;
+  teacherId: string;
+};
+
+type AdminCsvForm = {
+  courseId: string;
+  csv: string;
+};
+
+type StudentTaskView = {
+  taskId: number;
+  taskTitle: string;
+  stageId: number;
+  stageName: string;
+  stageWeightPercent: number;
+  softDeadline: string | null;
+  hardDeadline: string | null;
+  artifactId: number;
+  artifactName: string;
+  lastRevisionStatus: string | null;
+  lastSubmittedAt: string | null;
+  lastPointsNetto: number | null;
+  daysUntilSoft: number | null;
+  daysOverdue: number | null;
+  statusLabel: string;
+};
+
+export default function Home() {
+  const [health, setHealth] = useState<string>("checking…");
+  const [loginState, setLoginState] = useState<LoginState>({
+    email: "admin@example.com",
+    password: "admin123",
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/health`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(res.statusText)))
+      .then((data) => setHealth(data.status ?? "ok"))
+      .catch(() => setHealth("offline"));
+  }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("token");
+    if (saved) {
+      setToken(saved);
+      fetch(`${API_URL}/api/auth/me`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${saved}` },
+      })
+        .then((res) => (res.ok ? res.json() : Promise.reject(res.statusText)))
+        .then((data) => setProfile(data))
+        .catch(() => {
+          setToken(null);
+          localStorage.removeItem("token");
+        });
+    }
+  }, []);
+
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(loginState),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Login failed");
+      }
+      const data = await res.json();
+      setToken(data.token);
+      localStorage.setItem("token", data.token);
+      setProfile(data.profile);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Login failed";
+      setError(message);
+      setToken(null);
+      setProfile(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = () => {
+    setToken(null);
+    setProfile(null);
+    localStorage.removeItem("token");
+  };
+
+  const content = useMemo(() => {
+    if (!profile || !token) return null;
+    if (profile.role === "TEACHER") {
+      return <TeacherView token={token} />;
+    }
+    if (profile.role === "STUDENT") {
+      return <StudentView token={token} />;
+    }
+    return <AdminView token={token} />;
+  }, [profile, token]);
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <div className="border-b border-slate-200 bg-white/80 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">
+              Panel dydaktyczny
+            </h1>
+            <p className="text-sm text-slate-600">
+              Demo loginy: admin@example.com/admin123 ·
+              teacher@example.com/teacher123 · s1@example.com/student123
+            </p>
+          </div>
+          <div className="flex items-center gap-3" aria-live="polite">
+            <span
+              className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${
+                health === "ok"
+                  ? "bg-emerald-100 text-emerald-800"
+                  : "bg-amber-100 text-amber-800"
+              }`}
+            >
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  health === "ok" ? "bg-emerald-500" : "bg-amber-500"
+                }`}
+                aria-hidden
+              />
+              {health === "ok" ? "API online" : "API offline"}
+            </span>
+            {token && profile ? (
+              <div className="flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                {profile.firstName} {profile.lastName} · {profile.role}
+                <button
+                  onClick={logout}
+                  className="text-indigo-600 hover:underline"
+                  aria-label="Wyloguj"
+                >
+                  Wyloguj
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-6xl px-6 py-6">
+        {!token || !profile ? (
+          <div className="max-w-xl rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+            <form
+              className="flex flex-col gap-4"
+              onSubmit={onSubmit}
+              aria-label="Formularz logowania"
+            >
+              <div>
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-slate-800"
+                >
+                  Email
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  aria-label="Email"
+                  autoComplete="email"
+                  required
+                  value={loginState.email}
+                  onChange={(e) =>
+                    setLoginState((state) => ({
+                      ...state,
+                      email: e.target.value,
+                    }))
+                  }
+                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-slate-800"
+                >
+                  Hasło
+                </label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  aria-label="Hasło"
+                  autoComplete="current-password"
+                  required
+                  value={loginState.password}
+                  onChange={(e) =>
+                    setLoginState((state) => ({
+                      ...state,
+                      password: e.target.value,
+                    }))
+                  }
+                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-indigo-300"
+              >
+                {loading ? "Logowanie..." : "Zaloguj"}
+              </button>
+              {error ? (
+                <p
+                  className="text-sm font-medium text-rose-700"
+                  role="alert"
+                  aria-live="assertive"
+                >
+                  {error}
+                </p>
+              ) : null}
+            </form>
+          </div>
+        ) : (
+          <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-sm text-slate-700">
+              Zalogowano jako{" "}
+              <span className="font-semibold">
+                {profile.firstName} {profile.lastName}
+              </span>{" "}
+              ({profile.role})
+            </p>
+          </div>
+        )}
+
+        {content ? (
+          content
+        ) : (
+          <p className="mt-4 text-sm text-slate-600">
+            Zaloguj się, aby zobaczyć dane.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AdminView({ token }: { token: string }) {
+  const [userForm, setUserForm] = useState<AdminUserForm>({
+    email: "",
+    password: "",
+    role: "TEACHER",
+    firstName: "",
+    lastName: "",
+  });
+  const [courseForm, setCourseForm] = useState<AdminCourseForm>({ name: "" });
+  const [assignForm, setAssignForm] = useState<AdminAssignForm>({
+    courseId: "",
+    teacherId: "",
+  });
+  const [csvForm, setCsvForm] = useState<AdminCsvForm>({
+    courseId: "",
+    csv: "albumNumber,firstName,lastName,groupName,email\nA100,Jan,Student,G1,s100@example.com",
+  });
+  const [msg, setMsg] = useState<string | null>(null);
+  
+  // Listy rozwijane
+  const [allCourses, setAllCourses] = useState<Course[]>([]);
+  const [allTeachers, setAllTeachers] = useState<{id: number; email: string; firstName: string; lastName: string}[]>([]);
+
+  useEffect(() => {
+    // Pobierz listę kursów
+    fetch(`${API_URL}/api/admin/courses`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((data) => setAllCourses(data))
+      .catch(() => {});
+
+    // Pobierz listę prowadzących
+    fetch(`${API_URL}/api/admin/users?role=TEACHER`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((data) => setAllTeachers(data))
+      .catch(() => {});
+  }, [token]);
+
+  const postJson = async (url: string, body: unknown) => {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error(t || res.statusText);
+    }
+    return res.json().catch(() => ({}));
+  };
+
+  const handleCreateUser = async () => {
+    try {
+      setMsg("Tworzenie użytkownika...");
+      await postJson(`${API_URL}/api/admin/users`, userForm);
+      setMsg("Utworzono użytkownika.");
+    } catch (e) {
+      setMsg("Błąd: " + (e as Error).message);
+    }
+  };
+
+  const handleCreateCourse = async () => {
+    try {
+      setMsg("Tworzenie kursu...");
+      await postJson(`${API_URL}/api/admin/courses`, courseForm);
+      setMsg("Utworzono kurs.");
+    } catch (e) {
+      setMsg("Błąd: " + (e as Error).message);
+    }
+  };
+
+  const handleAssign = async () => {
+    try {
+      setMsg("Przypisywanie prowadzącego...");
+      await postJson(
+        `${API_URL}/api/admin/courses/${assignForm.courseId}/assign-teacher`,
+        { teacherId: Number(assignForm.teacherId) }
+      );
+      setMsg("Przypisano prowadzącego.");
+    } catch (e) {
+      setMsg("Błąd: " + (e as Error).message);
+    }
+  };
+
+  const handleImportCsv = async () => {
+    try {
+      setMsg("Import CSV...");
+      const formData = new FormData();
+      formData.append("file", new Blob([csvForm.csv], { type: "text/csv" }), "students.csv");
+      const res = await fetch(
+        `${API_URL}/api/admin/courses/${csvForm.courseId}/students/import-csv`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        }
+      );
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || res.statusText);
+      }
+      setMsg("Zaimportowano CSV.");
+    } catch (e) {
+      setMsg("Błąd: " + (e as Error).message);
+    }
+  };
+  
+  const handleGenerateTestStudents = async () => {
+    if (!csvForm.courseId) {
+      setMsg("Wybierz najpierw kurs!");
+      return;
+    }
+    if (!confirm("Czy na pewno wygenerować 9 testowych studentów?")) return;
+    try {
+      setMsg("Generowanie testowych studentów...");
+      const res = await fetch(
+        `${API_URL}/api/admin/courses/${csvForm.courseId}/students/generate-test?count=9`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      const result = await res.json();
+      setMsg(result.message || "Wygenerowano testowych studentów.");
+    } catch (e) {
+      setMsg("Błąd: " + (e as Error).message);
+    }
+  };
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-3">
+      <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-sm font-semibold text-slate-800">👤 Utwórz użytkownika</h2>
+        <p className="mt-1 text-xs text-slate-600">Dodaj nowego admina, prowadzącego lub studenta.</p>
+        <div className="mt-3 space-y-2 text-sm">
+          <input
+            className="w-full rounded border px-3 py-2"
+            placeholder="Email"
+            value={userForm.email}
+            onChange={(e) => setUserForm((f) => ({ ...f, email: e.target.value }))}
+          />
+          <input
+            className="w-full rounded border px-3 py-2"
+            placeholder="Hasło"
+            type="password"
+            value={userForm.password}
+            onChange={(e) => setUserForm((f) => ({ ...f, password: e.target.value }))}
+          />
+          <div className="flex gap-2">
+            <select
+              className="w-1/3 rounded border px-3 py-2"
+              value={userForm.role}
+              onChange={(e) =>
+                setUserForm((f) => ({
+                  ...f,
+                  role: e.target.value as "ADMIN" | "TEACHER" | "STUDENT",
+                }))
+              }
+            >
+              <option value="ADMIN">🔑 Administrator</option>
+              <option value="TEACHER">👨‍🏫 Prowadzący</option>
+              <option value="STUDENT">🎓 Student</option>
+            </select>
+            <input
+              className="w-1/3 rounded border px-3 py-2"
+              placeholder="Imię"
+              value={userForm.firstName}
+              onChange={(e) => setUserForm((f) => ({ ...f, firstName: e.target.value }))}
+            />
+            <input
+              className="w-1/3 rounded border px-3 py-2"
+              placeholder="Nazwisko"
+              value={userForm.lastName}
+              onChange={(e) => setUserForm((f) => ({ ...f, lastName: e.target.value }))}
+            />
+          </div>
+          <button
+            onClick={handleCreateUser}
+            className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm"
+          >
+            Utwórz użytkownika
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-sm font-semibold text-slate-800">📚 Utwórz kurs</h2>
+        <p className="mt-1 text-xs text-slate-600">Nazwa kursu powinna zawierać: semestr, wydział, klasę i grupę (np. &quot;4ABW3CII&quot;).</p>
+        <div className="mt-3 space-y-2 text-sm">
+          <input
+            className="w-full rounded border px-3 py-2"
+            placeholder="Nazwa kursu (np. 4ABW3CII - Semestr 4, Wydział ABW, Klasa 3C, Grupa II)"
+            value={courseForm.name}
+            onChange={(e) => setCourseForm({ name: e.target.value })}
+          />
+          <button
+            onClick={handleCreateCourse}
+            className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm"
+          >
+            Utwórz kurs
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-sm font-semibold text-slate-800">🔗 Przypisz prowadzącego do kursu</h2>
+        <p className="mt-1 text-xs text-slate-600">Wybierz kurs i prowadzącego z list rozwijanych.</p>
+        <div className="mt-3 space-y-2 text-sm">
+          <select
+            className="w-full rounded border px-3 py-2"
+            value={assignForm.courseId}
+            onChange={(e) => setAssignForm((f) => ({ ...f, courseId: e.target.value }))}
+          >
+            <option value="">-- Wybierz kurs --</option>
+            {allCourses.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <select
+            className="w-full rounded border px-3 py-2"
+            value={assignForm.teacherId}
+            onChange={(e) => setAssignForm((f) => ({ ...f, teacherId: e.target.value }))}
+          >
+            <option value="">-- Wybierz prowadzącego --</option>
+            {allTeachers.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.firstName} {t.lastName} ({t.email})
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={handleAssign}
+            className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm"
+          >
+            Przypisz
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm lg:col-span-3">
+        <h2 className="text-sm font-semibold text-slate-800">📥 Import studentów (CSV)</h2>
+        <p className="mt-1 text-xs text-slate-600">Prześlij listę studentów w formacie CSV. Każdy student zostanie automatycznie utworzony (jeśli nie istnieje) i przypisany do wybranego kursu.</p>
+        <div className="mt-3 grid gap-3 lg:grid-cols-3">
+          <div className="space-y-2 text-sm">
+            <select
+              className="w-full rounded border px-3 py-2"
+              value={csvForm.courseId}
+              onChange={(e) => setCsvForm((f) => ({ ...f, courseId: e.target.value }))}
+            >
+              <option value="">-- Wybierz kurs --</option>
+              {allCourses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-600">
+              Format CSV:<br/>
+              <span className="font-mono bg-slate-100 px-2 py-1 rounded text-[11px] block mt-1">
+                albumNumber,firstName,lastName,groupName,email
+              </span>
+              <span className="font-mono bg-slate-100 px-2 py-1 rounded text-[11px] block mt-1">
+                A100,Jan,Kowalski,Grupa 1,jan.kowalski@example.com
+              </span>
+            </p>
+            <div className="grid gap-2">
+              <button
+                onClick={handleImportCsv}
+                className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
+              >
+                Importuj CSV
+              </button>
+              <button
+                onClick={handleGenerateTestStudents}
+                className="w-full rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700"
+              >
+                🧪 Wygeneruj 9 testowych studentów
+              </button>
+            </div>
+            <p className="text-xs text-slate-500 mt-2">
+              Testowi studenci: test.student1@example.com do test.student9@example.com (hasło: student123)
+            </p>
+          </div>
+          <div className="lg:col-span-2">
+            <textarea
+              className="min-h-[160px] w-full rounded border px-3 py-2 text-sm font-mono"
+              value={csvForm.csv}
+              onChange={(e) => setCsvForm((f) => ({ ...f, csv: e.target.value }))}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 lg:col-span-3">
+        <p className="font-semibold">Podpowiedzi</p>
+        <div className="mt-1 grid gap-2 md:grid-cols-2 lg:grid-cols-4">
+          <p>Health: /api/health</p>
+          <p>Auth: /api/auth/login, /api/auth/me</p>
+          <p>Export CSV: /api/export/course/{`{id}`}/csv</p>
+          <p>Archiwizacja: /api/archive/course/{`{id}`}</p>
+        </div>
+        {msg ? <p className="mt-2 text-xs text-emerald-900">Status: {msg}</p> : null}
+      </div>
+    </div>
+  );
+}
+
+function TeacherView({ token }: { token: string }) {
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [stages, setStages] = useState<Stage[]>([]);
+  const [queue, setQueue] = useState<QueueEntry[]>([]);
+  const [selectedCourse, setSelectedCourse] = useState<number | null>(null);
+  const [selectedTask, setSelectedTask] = useState<number | null>(null);
+  const [selectedStage, setSelectedStage] = useState<number | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<QueueEntry | null>(null);
+  const [history, setHistory] = useState<RevisionHistory[]>([]);
+  const [gradeForm, setGradeForm] = useState({
+    points: "",
+    comment: "",
+    status: "ACCEPTED",
+  });
+  const [gradeStatus, setGradeStatus] = useState<string | null>(null);
+  const [gradeSending, setGradeSending] = useState(false);
+  const [queueFilter, setQueueFilter] = useState<string>("ALL");
+  const [createTask, setCreateTask] = useState({ title: "", description: "" });
+  const [createStage, setCreateStage] = useState({
+    name: "",
+    weightPercent: "100",
+    softDeadline: "",
+    hardDeadline: "",
+    penaltyPercentPer24h: "10",
+    penaltyPercentMax: "50",
+  });
+  const [createArtifact, setCreateArtifact] = useState({ name: "", type: "plik" });
+  const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  
+  // Zarządzanie studentami
+  const [students, setStudents] = useState<any[]>([]);
+  const [showStudentsTab, setShowStudentsTab] = useState(false);
+  const [newStudent, setNewStudent] = useState({
+    albumNumber: "",
+    firstName: "",
+    lastName: "",
+    groupName: "",
+    email: ""
+  });
+  const [csvStudents, setCsvStudents] = useState("albumNumber,firstName,lastName,groupName,email\nA100,Jan,Kowalski,Grupa1,jan.k@example.com");
+  const [studentMsg, setStudentMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiFetch<Course[]>(`${API_URL}/api/teacher/courses`, token)
+      .then(setCourses)
+      .catch(() => setCourses([]));
+  }, [token]);
+
+  useEffect(() => {
+    if (!selectedCourse) return;
+    apiFetch<Task[]>(`${API_URL}/api/course/${selectedCourse}/tasks`, token)
+      .then(setTasks)
+      .catch(() => setTasks([]));
+    setStages([]);
+    setQueue([]);
+    setSelectedTask(null);
+    setSelectedStage(null);
+  }, [selectedCourse, token]);
+
+  useEffect(() => {
+    if (!selectedTask) return;
+    apiFetch<Stage[]>(`${API_URL}/api/course/tasks/${selectedTask}/stages`, token)
+      .then(setStages)
+      .catch(() => setStages([]));
+    setQueue([]);
+    setSelectedStage(null);
+  }, [selectedTask, token]);
+
+  useEffect(() => {
+    if (!selectedStage) return;
+    apiFetch<QueueEntry[]>(
+      `${API_URL}/api/grading-queue/stage/${selectedStage}`,
+      token
+    )
+      .then(setQueue)
+      .catch(() => setQueue([]));
+  }, [selectedStage, token]);
+
+  useEffect(() => {
+    if (!selectedEntry) {
+      setHistory([]);
+      return;
+    }
+    apiFetch(
+      `${API_URL}/api/revisions/artifact/${selectedEntry.id.artifactId}/student/${selectedEntry.id.studentId}`,
+      token
+    )
+      .then((h) => setHistory(h as RevisionHistory[]))
+      .catch(() => setHistory([]));
+  }, [selectedEntry, token]);
+  
+  // Pobierz studentów gdy wybrano kurs i otwarto zakładkę
+  useEffect(() => {
+    if (!selectedCourse || !showStudentsTab) return;
+    apiFetch<any[]>(`${API_URL}/api/teacher/courses/${selectedCourse}/students`, token)
+      .then(setStudents)
+      .catch(() => setStudents([]));
+  }, [selectedCourse, showStudentsTab, token]);
+
+  const handleGrade = async () => {
+    if (!selectedEntry?.lastRevisionId) {
+      setGradeStatus("Brak rewizji do oceny.");
+      return;
+    }
+    const numericPoints = Number(gradeForm.points);
+    if (Number.isNaN(numericPoints) || numericPoints < 0) {
+      setGradeStatus("Podaj poprawną liczbę punktów (>=0).");
+      return;
+    }
+    setGradeSending(true);
+    setGradeStatus(null);
+    try {
+      await fetch(`${API_URL}/api/grades`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          revisionId: selectedEntry.lastRevisionId,
+          points: numericPoints,
+          comment: gradeForm.comment,
+          statusAfterGrade: gradeForm.status,
+        }),
+      }).then((r) => {
+        if (!r.ok) throw new Error("grade");
+      });
+      // refresh queue & history
+      if (selectedStage) {
+        apiFetch<QueueEntry[]>(
+          `${API_URL}/api/grading-queue/stage/${selectedStage}`,
+          token
+        )
+          .then(setQueue)
+          .catch(() => setQueue([]));
+      }
+      if (selectedEntry) {
+        apiFetch(
+          `${API_URL}/api/revisions/artifact/${selectedEntry.id.artifactId}/student/${selectedEntry.id.studentId}`,
+          token
+        )
+          .then((h) => setHistory(h as RevisionHistory[]))
+          .catch(() => setHistory([]));
+      }
+      setGradeStatus("Zapisano ocenę.");
+    } catch {
+      setGradeStatus("Błąd zapisu oceny.");
+    } finally {
+      setGradeSending(false);
+    }
+  };
+
+  const postJson = async (url: string, body: unknown) => {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error(t || res.statusText);
+    }
+    return res.json().catch(() => ({}));
+  };
+
+  const handleCreateTask = async () => {
+    if (!selectedCourse) return;
+    try {
+      setStatusMsg("Tworzenie zadania...");
+      await postJson(`${API_URL}/api/course/tasks`, {
+        courseId: selectedCourse,
+        title: createTask.title,
+        description: createTask.description
+      });
+      const refreshed = await apiFetch<Task[]>(
+        `${API_URL}/api/course/${selectedCourse}/tasks`,
+        token
+      );
+      setTasks(refreshed);
+      setCreateTask({ title: "", description: "" });
+      setStatusMsg("Utworzono zadanie.");
+    } catch (e) {
+      setStatusMsg("Błąd tworzenia zadania: " + (e as Error).message);
+    }
+  };
+
+  const handleCreateStage = async () => {
+    if (!selectedTask) return;
+    try {
+      setStatusMsg("Tworzenie etapu...");
+      await postJson(`${API_URL}/api/course/stages`, {
+        taskId: selectedTask,
+        name: createStage.name,
+        weightPercent: Number(createStage.weightPercent),
+        softDeadline: createStage.softDeadline ? new Date(createStage.softDeadline).toISOString() : null,
+        hardDeadline: createStage.hardDeadline ? new Date(createStage.hardDeadline).toISOString() : null,
+        penaltyKPercentPer24h: Number(createStage.penaltyPercentPer24h),
+        penaltyMaxMPercent: Number(createStage.penaltyPercentMax),
+      });
+      const stagesRes = await apiFetch<Stage[]>(
+        `${API_URL}/api/course/tasks/${selectedTask}/stages`,
+        token
+      );
+      setStages(stagesRes);
+      setCreateStage({
+        name: "",
+        weightPercent: "100",
+        softDeadline: "",
+        hardDeadline: "",
+        penaltyPercentPer24h: "10",
+        penaltyPercentMax: "50",
+      });
+      setStatusMsg("Utworzono etap.");
+    } catch (e) {
+      setStatusMsg("Błąd tworzenia etapu: " + (e as Error).message);
+    }
+  };
+
+  const handleCreateArtifact = async () => {
+    if (!selectedStage) return;
+    try {
+      setStatusMsg("Tworzenie artefaktu...");
+      await postJson(`${API_URL}/api/course/artifacts`, {
+        stageId: selectedStage,
+        name: createArtifact.name,
+        type: createArtifact.type,
+        maxSizeBytes: 10485760, // 10MB
+        allowedExtensionsCsv: "pdf,zip,jpg,png"
+      });
+      setCreateArtifact({ name: "", type: "plik" });
+      setStatusMsg("Utworzono artefakt.");
+    } catch (e) {
+      setStatusMsg("Błąd tworzenia artefaktu: " + (e as Error).message);
+    }
+  };
+  
+  const handleAddStudent = async () => {
+    if (!selectedCourse) return;
+    try {
+      setStudentMsg("Dodawanie studenta...");
+      await postJson(`${API_URL}/api/teacher/courses/${selectedCourse}/students`, newStudent);
+      setNewStudent({ albumNumber: "", firstName: "", lastName: "", groupName: "", email: "" });
+      setStudentMsg("Dodano studenta.");
+      // Odśwież listę
+      const refreshed = await apiFetch<any[]>(`${API_URL}/api/teacher/courses/${selectedCourse}/students`, token);
+      setStudents(refreshed);
+    } catch (e) {
+      setStudentMsg("Błąd: " + (e as Error).message);
+    }
+  };
+  
+  const handleRemoveStudent = async (courseStudentId: number) => {
+    if (!selectedCourse) return;
+    if (!confirm("Czy na pewno usunąć tego studenta z kursu?")) return;
+    try {
+      setStudentMsg("Usuwanie...");
+      await fetch(`${API_URL}/api/teacher/courses/${selectedCourse}/students/${courseStudentId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setStudentMsg("Usunięto studenta.");
+      // Odśwież listę
+      const refreshed = await apiFetch<any[]>(`${API_URL}/api/teacher/courses/${selectedCourse}/students`, token);
+      setStudents(refreshed);
+    } catch (e) {
+      setStudentMsg("Błąd: " + (e as Error).message);
+    }
+  };
+  
+  const handleImportCsv = async () => {
+    if (!selectedCourse) return;
+    try {
+      setStudentMsg("Importowanie...");
+      const res = await fetch(`${API_URL}/api/teacher/courses/${selectedCourse}/students/import-csv`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "text/plain"
+        },
+        body: csvStudents
+      });
+      const results = await res.json();
+      const successCount = results.filter((r: any) => r.status === "ok").length;
+      setStudentMsg(`Zaimportowano ${successCount} z ${results.length} studentów.`);
+      // Odśwież listę
+      const refreshed = await apiFetch<any[]>(`${API_URL}/api/teacher/courses/${selectedCourse}/students`, token);
+      setStudents(refreshed);
+    } catch (e) {
+      setStudentMsg("Błąd importu: " + (e as Error).message);
+    }
+  };
+  
+
+
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 className="text-sm font-semibold text-slate-700">Kursy/Zadania</h2>
+        <div className="mt-2 space-y-2">
+          <select
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            value={selectedCourse ?? ""}
+            onChange={(e) =>
+              setSelectedCourse(e.target.value ? Number(e.target.value) : null)
+            }
+          >
+            <option value="">Wybierz kurs</option>
+            {courses.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <select
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            value={selectedTask ?? ""}
+            onChange={(e) =>
+              setSelectedTask(e.target.value ? Number(e.target.value) : null)
+            }
+            disabled={!selectedCourse}
+          >
+            <option value="">Wybierz zadanie</option>
+            {tasks.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.title}
+              </option>
+            ))}
+          </select>
+          <select
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            value={selectedStage ?? ""}
+            onChange={(e) =>
+              setSelectedStage(e.target.value ? Number(e.target.value) : null)
+            }
+            disabled={!selectedTask}
+          >
+            <option value="">Wybierz etap</option>
+            {stages.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name} ({s.weightPercent}%)
+              </option>
+            ))}
+          </select>
+        </div>
+        
+        {/* Przyciski zakładek */}
+        {selectedCourse && (
+          <div className="mt-4 flex gap-2">
+            <button
+              onClick={() => setShowStudentsTab(false)}
+              className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold ${
+                !showStudentsTab
+                  ? "bg-indigo-600 text-white"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+              }`}
+            >
+              📚 Zadania i oceny
+            </button>
+            <button
+              onClick={() => setShowStudentsTab(true)}
+              className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold ${
+                showStudentsTab
+                  ? "bg-indigo-600 text-white"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+              }`}
+            >
+              👥 Studenci ({students.length})
+            </button>
+          </div>
+        )}
+        
+        {/* Sekcja zarządzania studentami */}
+        {showStudentsTab && selectedCourse ? (
+          <div className="mt-4 space-y-4">
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">
+              <p className="text-sm font-semibold text-slate-800">➕ Dodaj studenta</p>
+              <div className="mt-2 grid gap-2">
+                <input
+                  className="rounded border px-2 py-1 text-sm"
+                  placeholder="Numer albumu"
+                  value={newStudent.albumNumber}
+                  onChange={(e) => setNewStudent(s => ({ ...s, albumNumber: e.target.value }))}
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    className="rounded border px-2 py-1 text-sm"
+                    placeholder="Imię"
+                    value={newStudent.firstName}
+                    onChange={(e) => setNewStudent(s => ({ ...s, firstName: e.target.value }))}
+                  />
+                  <input
+                    className="rounded border px-2 py-1 text-sm"
+                    placeholder="Nazwisko"
+                    value={newStudent.lastName}
+                    onChange={(e) => setNewStudent(s => ({ ...s, lastName: e.target.value }))}
+                  />
+                </div>
+                <input
+                  className="rounded border px-2 py-1 text-sm"
+                  placeholder="Grupa (np. Grupa1)"
+                  value={newStudent.groupName}
+                  onChange={(e) => setNewStudent(s => ({ ...s, groupName: e.target.value }))}
+                />
+                <input
+                  className="rounded border px-2 py-1 text-sm"
+                  type="email"
+                  placeholder="Email"
+                  value={newStudent.email}
+                  onChange={(e) => setNewStudent(s => ({ ...s, email: e.target.value }))}
+                />
+                <button
+                  onClick={handleAddStudent}
+                  className="rounded bg-indigo-600 px-3 py-2 text-sm font-semibold text-white"
+                >
+                  Dodaj studenta
+                </button>
+              </div>
+            </div>
+              {/* Ręczne przypisywanie ucznia */}
+              <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
+                  <h2 className="text-sm font-semibold text-slate-800">👤 Przypisz ucznia do grupy zajęciowej</h2>
+                  <p className="mt-1 text-xs text-slate-600">Wybierz ucznia z listy i przypisz do grupy.</p>
+
+                  <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                      <div className="space-y-2">
+                          <select
+                              className="w-full rounded border px-3 py-2 text-sm"
+                              value={assignStudentForm.courseId}
+                              onChange={(e) => setAssignStudentForm(f => ({ ...f, courseId: e.target.value }))}
+                          >
+                              <option value="">-- Wybierz grupę zajęciową --</option>
+                              {allCourses.map((c) => (
+                                  <option key={c.id} value={c.id}>{c.name}</option>
+                              ))}
+                          </select>
+
+                          <select
+                              className="w-full rounded border px-3 py-2 text-sm"
+                              value={assignStudentForm.studentId}
+                              onChange={(e) => setAssignStudentForm(f => ({ ...f, studentId: e.target.value }))}
+                          >
+                              <option value="">-- Wybierz ucznia --</option>
+                              {allStudents.map((s) => (
+                                  <option key={s.id} value={s.id}>
+                                      {s.firstName} {s.lastName} ({s.groupName ? `Grupa: ${s.groupName}` : "Brak grupy"})
+                                  </option>
+                              ))}
+                          </select>
+
+                          <input
+                              className="w-full rounded border px-3 py-2 text-sm"
+                              placeholder="Numer albumu (np. A100)"
+                              value={assignStudentForm.albumNumber}
+                              onChange={(e) => setAssignStudentForm(f => ({ ...f, albumNumber: e.target.value }))}
+                          />
+
+                          <button
+                              onClick={handleAssignStudent}
+                              className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
+                          >
+                              Przypisz ucznia
+                          </button>
+                      </div>
+
+                      <div className="rounded border border-slate-100 bg-slate-50 p-3 text-xs text-slate-600">
+                          <p className="font-semibold">💡 Jak to działa?</p>
+                          <ul className="mt-2 list-disc space-y-1 pl-4">
+                              <li>Wybierz grupę zajęciową (np. 4ABW3CII)</li>
+                              <li>Wybierz ucznia z listy</li>
+                              <li>Podaj numer albumu (np. A100)</li>
+                              <li>Kliknij "Przypisz ucznia"</li>
+                          </ul>
+                      </div>
+                  </div>
+              </div>
+
+              <div className="rounded border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-sm font-semibold text-slate-800">📥 Import CSV</p>
+                  <p className="mt-1 text-xs text-slate-600">
+                      Możesz zaimportować studentów za pomocą pliku CSV. Format: albumNumber,firstName,lastName,groupName,email
+                  </p>
+                  <textarea
+                      className="mt-2 w-full rounded border px-2 py-1 text-xs font-mono"
+                      rows={5}
+                      value={csvStudents}
+                      onChange={(e) => setCsvStudents(e.target.value)}
+                  />
+                  <button
+                      onClick={handleImportCsv}
+                      className="mt-2 w-full rounded bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+                  >
+                      Importuj CSV
+                  </button>
+              </div>
+
+
+              {studentMsg && (
+              <p className="text-sm text-slate-600">{studentMsg}</p>
+            )}
+            
+            <div className="rounded border border-slate-200 bg-white">
+              <div className="border-b border-slate-200 bg-slate-50 px-3 py-2">
+                <p className="text-sm font-semibold text-slate-800">Lista studentów ({students.length})</p>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {students.length === 0 ? (
+                  <p className="p-3 text-sm text-slate-600">Brak studentów w tym kursie.</p>
+                ) : (
+                  students.map((s) => (
+                    <div key={s.id} className="flex items-center justify-between p-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">
+                          {s.firstName} {s.lastName}
+                        </p>
+                        <p className="text-xs text-slate-600">
+                          {s.albumNumber} | {s.groupName} | {s.email}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveStudent(s.id)}
+                        className="rounded bg-red-100 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-200"
+                      >
+                        Usuń
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        ) : null}
+        
+        {/* Sekcja zadań - tylko gdy NIE pokazujemy studentów */}
+        {!showStudentsTab && (
+        <div>
+          <div className="mt-4 space-y-3 border-t pt-4">
+          <p className="text-xs font-semibold text-slate-700">Dodaj zadanie</p>
+          <input
+            className="w-full rounded border px-3 py-2 text-sm"
+            placeholder="Tytuł zadania"
+            value={createTask.title}
+            onChange={(e) => setCreateTask((f) => ({ ...f, title: e.target.value }))}
+          />
+          <input
+            className="w-full rounded border px-3 py-2 text-sm"
+            placeholder="Opis"
+            value={createTask.description}
+            onChange={(e) => setCreateTask((f) => ({ ...f, description: e.target.value }))}
+          />
+          <button
+            disabled={!selectedCourse}
+            onClick={handleCreateTask}
+            className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-50"
+          >
+            Dodaj zadanie
+          </button>
+        </div>
+        <div className="mt-4 space-y-3 border-t pt-4">
+          <p className="text-xs font-semibold text-slate-700">➕ Dodaj etap zadania</p>
+          <input
+            className="w-full rounded border px-3 py-2 text-sm"
+            placeholder="Nazwa etapu (np. Etap 1, Dokumentacja)"
+            value={createStage.name}
+            onChange={(e) => setCreateStage((f) => ({ ...f, name: e.target.value }))}
+          />
+          <input
+            type="number"
+            min="0"
+            max="100"
+            className="w-full rounded border px-3 py-2 text-sm"
+            placeholder="Waga etapu w % (np. 30 = 30% oceny końcowej)"
+            value={createStage.weightPercent}
+            onChange={(e) => setCreateStage((f) => ({ ...f, weightPercent: e.target.value }))}
+          />
+          <div>
+            <label className="text-xs text-slate-600">Termin preferowany (soft deadline)</label>
+            <input
+              type="datetime-local"
+              className="w-full rounded border px-3 py-2 text-sm"
+              value={createStage.softDeadline}
+              onChange={(e) => setCreateStage((f) => ({ ...f, softDeadline: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="text-xs text-slate-600">Termin ostateczny (hard deadline)</label>
+            <input
+              type="datetime-local"
+              className="w-full rounded border px-3 py-2 text-sm"
+              value={createStage.hardDeadline}
+              onChange={(e) => setCreateStage((f) => ({ ...f, hardDeadline: e.target.value }))}
+            />
+          </div>
+          <div className="flex gap-2">
+            <div className="w-1/2">
+              <label className="text-xs text-slate-600">Kara % za każde 24h spóźnienia</label>
+              <input
+                type="number"
+                min="0"
+                step="0.1"
+                className="w-full rounded border px-3 py-2 text-sm"
+                placeholder="np. 5"
+                value={createStage.penaltyPercentPer24h}
+                onChange={(e) =>
+                  setCreateStage((f) => ({ ...f, penaltyPercentPer24h: e.target.value }))
+                }
+              />
+            </div>
+            <div className="w-1/2">
+              <label className="text-xs text-slate-600">Maksymalna kara %</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                className="w-full rounded border px-3 py-2 text-sm"
+                placeholder="np. 50"
+                value={createStage.penaltyPercentMax}
+                onChange={(e) =>
+                  setCreateStage((f) => ({ ...f, penaltyPercentMax: e.target.value }))
+                }
+              />
+            </div>
+          </div>
+          <button
+            disabled={!selectedTask}
+            onClick={handleCreateStage}
+            className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-50"
+          >
+            {selectedTask ? "➕ Dodaj etap" : "⚠️ Najpierw wybierz zadanie"}
+          </button>
+        </div>
+        <div className="mt-4 space-y-3 border-t pt-4">
+          <p className="text-xs font-semibold text-slate-700">📎 Dodaj plik do przesłania</p>
+          <p className="text-xs text-slate-500">Student będzie mógł przesłać ten plik jako część etapu.</p>
+          <input
+            className="w-full rounded border px-3 py-2 text-sm"
+            placeholder="Nazwa pliku (np. Raport.pdf, Kod źródłowy)"
+            value={createArtifact.name}
+            onChange={(e) => setCreateArtifact((f) => ({ ...f, name: e.target.value }))}
+          />
+          <input
+            className="w-full rounded border px-3 py-2 text-sm"
+            placeholder="Typ pliku (np. PDF, ZIP, DOCX)"
+            value={createArtifact.type}
+            onChange={(e) => setCreateArtifact((f) => ({ ...f, type: e.target.value }))}
+          />
+          <button
+            disabled={!selectedStage}
+            onClick={handleCreateArtifact}
+            className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-50"
+          >
+            {selectedStage ? "➕ Dodaj plik" : "⚠️ Najpierw wybierz etap"}
+          </button>
+        </div>
+        {statusMsg ? (
+          <p className="mt-3 text-xs text-slate-600" aria-live="polite">
+            {statusMsg}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 className="text-sm font-semibold text-slate-700">Kolejka ocen</h2>
+        <div className="mt-3 flex items-center gap-2 text-xs text-slate-600">
+          <span className="font-semibold">Filtr:</span>
+          {[
+            { value: "ALL", label: "📋 Wszystko" },
+            { value: "SUBMITTED", label: "📤 Przesłane" },
+            { value: "NEEDS_FIX", label: "⚠️ Do poprawy" },
+            { value: "ACCEPTED", label: "✅ Zaakceptowane" },
+            { value: "REJECTED", label: "❌ Odrzucone" }
+          ].map((f) => (
+            <button
+              key={f.value}
+              onClick={() => setQueueFilter(f.value)}
+              className={`rounded-full px-3 py-1 ${
+                queueFilter === f.value
+                  ? "bg-indigo-100 text-indigo-800 font-semibold"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <div className="mt-3 divide-y divide-slate-100">
+          {queue.length === 0 ? (
+            <p className="text-sm text-slate-600">Brak zgłoszeń.</p>
+          ) : (
+            queue
+              .filter((q) =>
+                queueFilter === "ALL"
+                  ? true
+                  : (q.lastRevisionStatus ?? "SUBMITTED") === queueFilter
+              )
+              .map((q) => (
+                <button
+                  key={`${q.id.artifactId}-${q.id.studentId}`}
+                  onClick={() => setSelectedEntry(q)}
+                  className={`w-full rounded px-2 py-2 text-left transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-200 ${
+                    selectedEntry &&
+                    selectedEntry.id.artifactId === q.id.artifactId &&
+                    selectedEntry.id.studentId === q.id.studentId
+                      ? "bg-indigo-50"
+                      : ""
+                  }`}
+                >
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-semibold">
+                      {q.studentName ?? "Student"}
+                    </span>
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+                      {q.lastRevisionStatus ?? "SUBMITTED"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-slate-500">
+                    <span>
+                      Netto: {q.lastPointsNetto ?? "-"} | Kara:{" "}
+                      {q.penaltyPercentApplied ?? 0}%
+                    </span>
+                    <span>
+                      {q.lastSubmittedAt ? formatDate(q.lastSubmittedAt) : "—"}
+                    </span>
+                  </div>
+                </button>
+              ))
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 className="text-sm font-semibold text-slate-700">Szczegóły</h2>
+        {selectedEntry ? (
+          <div className="space-y-3 text-sm">
+            <p className="font-semibold">{selectedEntry.studentName}</p>
+            <p>Album: {selectedEntry.albumNumber ?? "-"}</p>
+            <p>Status: {selectedEntry.lastRevisionStatus}</p>
+            <p>Netto: {selectedEntry.lastPointsNetto ?? "-"}</p>
+            <p>Kara: {selectedEntry.penaltyPercentApplied ?? 0}%</p>
+            <p>
+              Oddane:{" "}
+              {selectedEntry.lastSubmittedAt
+                ? formatDate(selectedEntry.lastSubmittedAt)
+                : "-"}
+            </p>
+            <div className="space-y-2 rounded border border-slate-100 p-3">
+              <p className="text-xs font-semibold text-slate-700">
+                Formularz oceny
+              </p>
+              <label className="block text-xs text-slate-600">
+                Punkty
+                <input
+                  type="number"
+                  min={0}
+                  value={gradeForm.points}
+                  onChange={(e) =>
+                    setGradeForm((f) => ({ ...f, points: e.target.value }))
+                  }
+                  className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                />
+              </label>
+              <label className="block text-xs text-slate-600">
+                Status
+                <select
+                  value={gradeForm.status}
+                  onChange={(e) =>
+                    setGradeForm((f) => ({ ...f, status: e.target.value }))
+                  }
+                  className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                >
+                  <option value="ACCEPTED">✅ Zaakceptowane</option>
+                  <option value="NEEDS_FIX">⚠️ Wymaga poprawek</option>
+                  <option value="REJECTED">❌ Odrzucone</option>
+                </select>
+              </label>
+              <label className="block text-xs text-slate-600">
+                Komentarz
+                <textarea
+                  value={gradeForm.comment}
+                  onChange={(e) =>
+                    setGradeForm((f) => ({ ...f, comment: e.target.value }))
+                  }
+                  className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                  rows={2}
+                />
+              </label>
+              <button
+                onClick={handleGrade}
+                disabled={gradeSending}
+                className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:opacity-50"
+              >
+                {gradeSending ? "Zapisywanie..." : "Zapisz ocenę"}
+              </button>
+              {gradeStatus ? (
+                <p className="text-xs text-slate-600" aria-live="polite">
+                  {gradeStatus}
+                </p>
+              ) : null}
+            </div>
+            <div>
+              <p className="font-semibold">Historia</p>
+              <ul className="mt-1 space-y-1 text-xs text-slate-600">
+                {history.length === 0 ? (
+                  <li>Brak rewizji.</li>
+                ) : (
+                  history.map((h) => (
+                    <li key={h.revisionId} className="rounded border border-slate-100 bg-slate-50 p-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold">Rewizja #{h.revisionId}</span>
+                        <span className="text-slate-500">{formatDate(h.createdAt)}</span>
+                      </div>
+                      <div className="mt-1 flex items-center gap-2 text-xs text-slate-700">
+                        <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold">
+                          {h.status}
+                        </span>
+                        {h.originalFileName ? <span>{h.originalFileName}</span> : null}
+                        {h.sizeBytes ? <span>({h.sizeBytes} B)</span> : null}
+                      </div>
+                      {h.grades && h.grades.length > 0 ? (
+                        <div className="mt-2 space-y-1 rounded border border-indigo-100 bg-white p-2">
+                          <p className="text-[11px] font-semibold text-indigo-700">Oceny</p>
+                          {h.grades.map((g: RevisionGrade) => (
+                            <div key={g.gradeId} className="flex items-center justify-between text-[11px] text-slate-700">
+                              <span>{g.points} pkt</span>
+                              <span className="rounded bg-indigo-100 px-2 py-0.5 text-indigo-700">
+                                {g.statusAfterGrade}
+                              </span>
+                              <span className="text-slate-500">{formatDate(g.createdAt)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-slate-600">Wybierz zgłoszenie.</p>
+        )}
+      </div>
+      </div>
+    </div>
+  );
+}
+
+function StudentView({ token }: { token: string }) {
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [selectedCourse, setSelectedCourse] = useState<number | null>(null);
+  const [overview, setOverview] = useState<StudentTaskView[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  const [selectedArtifactId, setSelectedArtifactId] = useState<number | null>(null);
+  const [history, setHistory] = useState<RevisionHistory[]>([]);
+
+  useEffect(() => {
+    apiFetch<Course[]>(`${API_URL}/api/student/courses`, token)
+      .then(setCourses)
+      .catch(() => setCourses([]));
+  }, [token]);
+
+  useEffect(() => {
+    if (!selectedCourse) {
+      setOverview([]);
+      return;
+    }
+    setLoading(true);
+    apiFetch<StudentTaskView[]>(
+      `${API_URL}/api/student/courses/${selectedCourse}/overview`,
+      token
+    )
+      .then(setOverview)
+      .catch(() => setOverview([]))
+      .finally(() => setLoading(false));
+  }, [selectedCourse, token]);
+
+  const getStatusColor = (status: string | null) => {
+    if (!status) return "bg-slate-100 text-slate-700";
+    switch (status) {
+      case "SUBMITTED":
+        return "bg-blue-100 text-blue-800";
+      case "NEEDS_FIX":
+        return "bg-amber-100 text-amber-800";
+      case "ACCEPTED":
+        return "bg-emerald-100 text-emerald-800";
+      case "REJECTED":
+        return "bg-rose-100 text-rose-800";
+      default:
+        return "bg-slate-100 text-slate-700";
+    }
+  };
+
+  const getStatusIcon = (status: string | null) => {
+    if (!status) return "○";
+    switch (status) {
+      case "SUBMITTED":
+        return "⏳";
+      case "NEEDS_FIX":
+        return "⚠";
+      case "ACCEPTED":
+        return "✓";
+      case "REJECTED":
+        return "✗";
+      default:
+        return "○";
+    }
+  };
+
+  const getDeadlineColor = (daysUntil: number | null, daysOverdue: number | null) => {
+    if (daysOverdue != null && daysOverdue > 0) {
+      return "text-rose-700 font-semibold";
+    }
+    if (daysUntil != null && daysUntil <= 3) {
+      return "text-amber-700 font-semibold";
+    }
+    return "text-slate-600";
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Nagłówek + wybór kursu */}
+      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 className="text-lg font-bold text-slate-900">Moje zadania</h2>
+        <div className="mt-3">
+          <label htmlFor="student-course-select" className="block text-sm font-medium text-slate-700 mb-1">
+            Wybierz kurs
+          </label>
+          <select
+            id="student-course-select"
+            aria-label="Wybierz kurs"
+            className="w-full max-w-md rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+            value={selectedCourse ?? ""}
+            onChange={(e) => {
+              setSelectedCourse(e.target.value ? Number(e.target.value) : null);
+              setSelectedArtifactId(null);
+              setHistory([]);
+            }}
+          >
+            <option value="">-- Wybierz kurs --</option>
+            {courses.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Tabela zadań */}
+      {selectedCourse && (
+        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm" role="region" aria-label="Tabela zadań">
+          {loading ? (
+            <p className="text-sm text-slate-600" aria-live="polite">Ładowanie...</p>
+          ) : overview.length === 0 ? (
+            <p className="text-sm text-slate-600" aria-live="polite">Brak zadań w tym kursie.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-slate-50 text-xs uppercase font-semibold text-slate-700">
+                  <tr>
+                    <th scope="col" className="px-3 py-3">📚 Zadanie</th>
+                    <th scope="col" className="px-3 py-3">📝 Etap</th>
+                    <th scope="col" className="px-3 py-3">⚖️ Waga</th>
+                    <th scope="col" className="px-3 py-3">📎 Plik do przesłania</th>
+                    <th scope="col" className="px-3 py-3">⏰ Termin (preferowany)</th>
+                    <th scope="col" className="px-3 py-3">🔖 Status</th>
+                    <th scope="col" className="px-3 py-3">🎯 Punkty</th>
+                    <th scope="col" className="px-3 py-3">⚙️ Akcje</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {overview.map((row) => (
+                    <tr
+                      key={`${row.taskId}-${row.stageId}-${row.artifactId}`}
+                      className="border-t border-slate-100 hover:bg-slate-50 transition"
+                    >
+                      <td className="px-3 py-3 font-medium text-slate-900">{row.taskTitle}</td>
+                      <td className="px-3 py-3 text-slate-700">
+                        {row.stageName}
+                      </td>
+                      <td className="px-3 py-3 text-slate-600">{row.stageWeightPercent}%</td>
+                      <td className="px-3 py-3 text-slate-700">{row.artifactName}</td>
+                      <td className={`px-3 py-3 ${getDeadlineColor(row.daysUntilSoft, row.daysOverdue)}`}>
+                        {row.softDeadline
+                          ? formatDate(row.softDeadline)
+                          : "-"}
+                        {row.daysUntilSoft != null && (
+                          <span className="ml-1 text-xs">
+                            (za {row.daysUntilSoft} dni)
+                          </span>
+                        )}
+                        {row.daysOverdue != null && (
+                          <span className="ml-1 text-xs">
+                            (spóźnienie {row.daysOverdue} dni)
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3">
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${getStatusColor(row.lastRevisionStatus)}`}
+                          aria-label={`Status: ${row.statusLabel}`}
+                        >
+                          <span aria-hidden="true">{getStatusIcon(row.lastRevisionStatus)}</span>
+                          {row.statusLabel}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 font-medium text-slate-900">
+                        {row.lastPointsNetto != null ? `${row.lastPointsNetto.toFixed(1)} pkt` : "-"}
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedArtifactId(row.artifactId);
+                              loadHistory(row.artifactId, token, setHistory);
+                            }}
+                            className="rounded-md border border-slate-300 px-2 py-1 text-xs hover:bg-slate-100 transition focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                            aria-label={`Pokaż historię rewizji dla ${row.artifactName}`}
+                          >
+                            Historia
+                          </button>
+                          <SubmitButton
+                            artifactId={row.artifactId}
+                            token={token}
+                            onDone={(msg) => setStatusMsg(msg)}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Panel historii i statusu */}
+      {selectedArtifactId && (
+        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm" role="region" aria-live="polite">
+          <h3 className="text-sm font-bold text-slate-900 mb-3">Historia rewizji (Artefakt #{selectedArtifactId})</h3>
+          {history.length === 0 ? (
+            <p className="text-sm text-slate-600">Brak historii rewizji.</p>
+          ) : (
+            <div className="space-y-2">
+              {history.map((h) => (
+                <div key={h.revisionId} className="rounded border border-slate-200 bg-slate-50 p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-slate-700">
+                      Rewizja #{h.revisionId}
+                    </span>
+                    <span className="text-xs text-slate-500">{formatDate(h.createdAt)}</span>
+                  </div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${getStatusColor(h.status)}`}
+                    >
+                      <span aria-hidden="true">{getStatusIcon(h.status)}</span>
+                      {h.status}
+                    </span>
+                    {h.originalFileName && (
+                      <span className="text-xs text-slate-600">{h.originalFileName}</span>
+                    )}
+                  </div>
+                  {h.grades && h.grades.length > 0 && (
+                    <div className="mt-2 space-y-1 rounded border border-indigo-100 bg-white p-2">
+                      <p className="text-xs font-semibold text-indigo-700">Oceny</p>
+                      {h.grades.map((g) => (
+                        <div key={g.gradeId} className="text-xs text-slate-700">
+                          <span className="font-semibold">{g.points} pkt</span> - {g.statusAfterGrade} - {formatDate(g.createdAt)}
+                          {g.comment && <p className="italic text-slate-600 mt-1">{g.comment}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Komunikaty statusu */}
+      {statusMsg && (
+        <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3" role="alert" aria-live="polite">
+          <p className="text-sm text-indigo-900">{statusMsg}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+async function loadHistory(
+  artifactId: number,
+  token: string,
+  setHistory: (h: RevisionHistory[]) => void
+) {
+  try {
+    const res = await fetch(
+      `${API_URL}/api/revisions/artifact/${artifactId}/me`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    if (!res.ok) throw new Error("history");
+    setHistory(await res.json());
+  } catch {
+    setHistory([]);
+  }
+}
+
+function SubmitButton({
+  artifactId,
+  token,
+  onDone,
+}: {
+  artifactId: number;
+  token: string;
+  onDone: (msg: string) => void;
+}) {
+  const [sending, setSending] = useState(false);
+  const handle = async () => {
+    setSending(true);
+    try {
+      const presign = await fetch(`${API_URL}/api/storage/presign`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          originalFileName: "demo.txt",
+          prefix: "student-upload",
+        }),
+      }).then((r) => {
+        if (!r.ok) throw new Error("presign");
+        return r.json();
+      });
+
+      await fetch(presign.uploadUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "text/plain",
+        },
+        body: new Blob(["demo upload"], { type: "text/plain" }),
+      }).then((r) => {
+        if (!r.ok) throw new Error("upload");
+      });
+
+      await fetch(`${API_URL}/api/revisions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          artifactId,
+          fileKey: presign.fileKey,
+          originalFileName: "demo.txt",
+          mimeType: "text/plain",
+          sizeBytes: 12,
+        }),
+      }).then((r) => {
+        if (!r.ok) throw new Error("submit");
+      });
+      onDone("Wysłano rewizję (upload + zapis).");
+    } catch {
+      onDone("Błąd wysyłki.");
+    } finally {
+      setSending(false);
+    }
+  };
+  return (
+    <button
+      onClick={handle}
+      disabled={sending}
+      className="rounded-md bg-indigo-600 px-3 py-1 text-xs font-semibold text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:opacity-50"
+    >
+      {sending ? "Wysyłanie..." : "Wyślij"}
+    </button>
+  );
+}
+
+function formatDate(date: string) {
+  try {
+    const d = new Date(date);
+    return new Intl.DateTimeFormat('pl-PL', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(d);
+  } catch {
+    return date;
+  }
+}
+
