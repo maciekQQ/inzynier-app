@@ -27,7 +27,9 @@ public record StudentTaskViewDto(
         Integer daysUntilSoft,
         Integer daysOverdue,
         String statusLabel,
-        java.util.List<TaskMaterialDto> materials
+        java.util.List<TaskMaterialDto> materials,
+        Double maxPoints,
+        Double passThreshold
 ) {
     public static String computeStatusLabel(RevisionStatus status, Integer daysUntilSoft, Integer daysOverdue) {
         if (status == null) {

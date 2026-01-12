@@ -160,7 +160,9 @@ public class StudentViewController {
                             daysUntilSoft,
                             daysOverdue,
                             statusLabel,
-                            materials
+                            materials,
+                            task.getMaxPoints(),
+                            task.getPassThreshold()
                     ));
                 }
             }
