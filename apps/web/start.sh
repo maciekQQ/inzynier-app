@@ -1,4 +1,6 @@
 #!/bin/bash
+export PORT=${PORT:-8080}
+export HOSTNAME="0.0.0.0"
 cd .next/standalone
-PORT=${PORT:-8080} node server.js
+node server.js
 
