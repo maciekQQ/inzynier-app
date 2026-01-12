@@ -1,0 +1,63 @@
+#!/bin/sh
+# ----------------------------------------------------------------------------
+# Maven Start Up Batch script for UN*X
+# ----------------------------------------------------------------------------
+if [ -z "$MAVEN_SKIP_RC" ] ; then
+  if [ -f /usr/local/etc/mavenrc ] ; then
+    . /usr/local/etc/mavenrc
+  fi
+  if [ -f /etc/mavenrc ] ; then
+    . /etc/mavenrc
+  fi
+  if [ -f "$HOME/.mavenrc" ] ; then
+    . "$HOME/.mavenrc"
+  fi
+fi
+
+cygwin=false;
+darwin=false;
+mingw=false
+case "`uname`" in
+  CYGWIN*) cygwin=true ;;
+  MINGW*) mingw=true;;
+  Darwin*) darwin=true
+    if [ -z "$JAVA_HOME" ]; then
+      if [ -x "/usr/libexec/java_home" ]; then
+        export JAVA_HOME="`/usr/libexec/java_home`"
+      fi
+    fi
+    ;;
+esac
+
+if [ -z "$JAVA_HOME" ] ; then
+  if $darwin ; then
+    JAVA_HOME=$(/usr/libexec/java_home)
+  fi
+fi
+
+if [ -z "$JAVA_HOME" ] ; then
+  echo "Warning: JAVA_HOME is not set."
+fi
+
+if $cygwin ; then
+  [ -n "$JAVA_HOME" ] &&
+    JAVA_HOME=`cygpath --unix "$JAVA_HOME"`
+  CLASSPATH=`cygpath --path --unix "$CLASSPATH"`
+fi
+
+BASE_DIR=`dirname "$0"`
+if [ -z "$BASE_DIR" ]; then
+  exit 1
+fi
+BASE_DIR=`cd "$BASE_DIR" && pwd`
+
+WRAPPER_JAR="$BASE_DIR/.mvn/wrapper/maven-wrapper.jar"
+WRAPPER_LAUNCHER=org.apache.maven.wrapper.MavenWrapperMain
+
+if [ "$MVNW_VERBOSE" = true ]; then
+  echo "Java Home: $JAVA_HOME"
+  echo "JAR: $WRAPPER_JAR"
+fi
+
+exec "$JAVA_HOME/bin/java" -classpath "$WRAPPER_JAR" $WRAPPER_LAUNCHER "$@"
+
