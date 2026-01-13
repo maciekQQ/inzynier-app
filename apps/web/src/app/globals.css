@@ -75,6 +75,11 @@ html.contrast-high1 .bg-slate-50,
 html.contrast-high1 .bg-gray-50 {
   background-color: #111827 !important;
 }
+html.contrast-high1 header,
+html.contrast-high1 .header,
+html.contrast-high1 .bg-white/80 {
+  background-color: #0b1220 !important;
+}
 html.contrast-high1 .text-slate-900,
 html.contrast-high1 .text-slate-800,
 html.contrast-high1 .text-slate-700,
@@ -129,6 +134,11 @@ html.contrast-high2 textarea:focus {
 html.contrast-high2 .bg-white,
 html.contrast-high2 .bg-slate-50,
 html.contrast-high2 .bg-gray-50 {
+  background-color: #000000 !important;
+}
+html.contrast-high2 header,
+html.contrast-high2 .header,
+html.contrast-high2 .bg-white/80 {
   background-color: #000000 !important;
 }
 html.contrast-high2 .text-slate-900,
