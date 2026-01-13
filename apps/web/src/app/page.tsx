@@ -913,6 +913,7 @@ function TeacherHomeLinks() {
     { href: "/materialy", label: "Edycja zadań" },
     { href: "/usuwanie", label: "Usuwanie zadań" },
     { href: "/eksport", label: "Eksport / archiwum" },
+    { href: "/statystyki", label: "Statystyki" },
   ];
   return (
     <div className="space-y-3">
@@ -2716,6 +2717,7 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [taskFilter, setTaskFilter] = useState<"ALL" | "DONE" | "FAILED" | "TODO" | "FIX">("ALL");
   const [expandedTasks, setExpandedTasks] = useState<Set<number>>(() => new Set());
+  const [showPasswordBox, setShowPasswordBox] = useState(false);
   const [readStudentNotifications, setReadStudentNotifications] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
     try {
@@ -3098,39 +3100,46 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
       </div>
 
       <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-bold text-slate-900">Zmiana hasła</h2>
-        <div className="mt-4 space-y-3 text-sm">
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">
-              Stare hasło
-            </label>
-            <input
-              type="password"
-              className="w-full rounded border px-3 py-2"
-              value={changePasswordForm.oldPassword}
-              onChange={(e) => setChangePasswordForm((f) => ({ ...f, oldPassword: e.target.value }))}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">
-              Nowe hasło
-            </label>
-            <input
-              type="password"
-              className="w-full rounded border px-3 py-2"
-              value={changePasswordForm.newPassword}
-              onChange={(e) => setChangePasswordForm((f) => ({ ...f, newPassword: e.target.value }))}
-            />
-          </div>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-slate-900">Zmiana hasła</h2>
           <button
-            onClick={handleChangePassword}
-            className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
+            onClick={() => setShowPasswordBox((v) => !v)}
+            className="rounded-md bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-200 shadow-sm"
           >
-            Zmień hasło
+            {showPasswordBox ? "Zwiń" : "Pokaż"}
           </button>
         </div>
-        {msg && (
-          <p className="mt-3 text-sm text-slate-600">{msg}</p>
+        {showPasswordBox && (
+          <div className="mt-4 space-y-3 text-sm">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">
+                Stare hasło
+              </label>
+              <input
+                type="password"
+                className="w-full rounded border px-3 py-2"
+                value={changePasswordForm.oldPassword}
+                onChange={(e) => setChangePasswordForm((f) => ({ ...f, oldPassword: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">
+                Nowe hasło
+              </label>
+              <input
+                type="password"
+                className="w-full rounded border px-3 py-2"
+                value={changePasswordForm.newPassword}
+                onChange={(e) => setChangePasswordForm((f) => ({ ...f, newPassword: e.target.value }))}
+              />
+            </div>
+            <button
+              onClick={handleChangePassword}
+              className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
+            >
+              Zmień hasło
+            </button>
+          </div>
         )}
       </div>
 

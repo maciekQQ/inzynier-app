@@ -105,7 +105,11 @@ public class CourseStructureController {
             throw new IllegalArgumentException("Data początkowa musi być przed datą końcową");
         }
         // Walidacja terminów etapu domyślnego (soft >= now, soft <= hard)
-        stageValidator.validateDeadlines(request.startDate(), request.endDate());
+        try {
+            stageValidator.validateDeadlines(request.startDate(), request.endDate());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
         
         Session session = null;
         if (request.sessionId() != null) {
@@ -156,7 +160,11 @@ public class CourseStructureController {
                 .orElseThrow(() -> new IllegalArgumentException("Task not found"));
         
         // Walidacja terminów
-        stageValidator.validateDeadlines(request.softDeadline(), request.hardDeadline());
+        try {
+            stageValidator.validateDeadlines(request.softDeadline(), request.hardDeadline());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
         
         // Walidacja parametrów kar
         stageValidator.validatePenaltyParams(request.penaltyKPercentPer24h(), request.penaltyMaxMPercent());
@@ -190,7 +198,11 @@ public class CourseStructureController {
                 .orElseThrow(() -> new IllegalArgumentException("Stage not found"));
 
         // Walidacja terminów i kar
-        stageValidator.validateDeadlines(request.softDeadline(), request.hardDeadline());
+        try {
+            stageValidator.validateDeadlines(request.softDeadline(), request.hardDeadline());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
         stageValidator.validatePenaltyParams(request.penaltyKPercentPer24h(), request.penaltyMaxMPercent());
 
         // Walidacja sumy wag po zmianie (odjąć starą, dodać nową)
