@@ -48,12 +48,14 @@ const TeacherHeader = ({
   notifications,
   notificationsOpen,
   onToggleNotifications,
+  unreadCount,
 }: {
   contrastMode: "normal" | "high1" | "high2";
   setContrastMode: (v: "normal" | "high1" | "high2") => void;
   notifications: string[];
   notificationsOpen: boolean;
   onToggleNotifications: () => void;
+  unreadCount: number;
 }) => (
   <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
     <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
@@ -68,9 +70,9 @@ const TeacherHeader = ({
             onClick={onToggleNotifications}
           >
             🔔
-            {notifications.length > 0 && (
+            {unreadCount > 0 && (
               <span className="absolute -right-2 -top-2 rounded-full bg-rose-500 px-2 py-[2px] text-[10px] font-bold text-white">
-                {notifications.length}
+                {unreadCount}
               </span>
             )}
           </button>
@@ -159,6 +161,16 @@ export default function OcenianiePage() {
   const [feedbackFile, setFeedbackFile] = useState<File | null>(null);
   const [uploadingFeedback, setUploadingFeedback] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [revisionCountByArtifact, setRevisionCountByArtifact] = useState<Record<string, number>>({});
+  const [readTeacherNotifications, setReadTeacherNotifications] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set();
+    try {
+      const saved = localStorage.getItem("teacherNotificationsRead");
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
 
   useEffect(() => {
     document.documentElement.classList.remove("contrast-high1", "contrast-high2");
@@ -222,6 +234,23 @@ export default function OcenianiePage() {
         const firstSubmitted = list.find((q) => q.lastSubmittedAt);
         setSelectedEntry(byPreferred || firstSubmitted || list[0] || null);
         setMsg(null);
+        // pobierz liczby rewizji dla etapów (etap = liczba rewizji)
+        const counts: Record<string, number> = { ...revisionCountByArtifact };
+        Promise.all(
+          list.map(async (q) => {
+            const key = `${q.artifactId}:${q.studentId}`;
+            if (counts[key]) return;
+            try {
+              const hist = await fetch(
+                `${API_URL}/api/revisions/artifact/${q.artifactId}/student/${q.studentId}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+              ).then((r) => r.json());
+              counts[key] = Array.isArray(hist) ? hist.length : 1;
+            } catch {
+              counts[key] = counts[key] || 1;
+            }
+          })
+        ).then(() => setRevisionCountByArtifact(counts));
       })
       .catch(() => {
         setQueue([]);
@@ -284,10 +313,29 @@ export default function OcenianiePage() {
   // Powiadomienia tylko dla prac w statusie SUBMITTED (oczekują na ocenę)
   const teacherNotifications = useMemo(() => {
     const pending = queue.filter((q) => q.lastRevisionStatus === "SUBMITTED");
-    return pending.map(
-      (e) => `Nowe oddanie od ${e.studentName || "Studenta"} do zadania ${e.taskTitle || ""} (${e.stageName || ""})`
-    );
-  }, [queue]);
+    return pending.map((e) => {
+      const key = `${e.artifactId}:${e.studentId}`;
+      const stage = revisionCountByArtifact[key] || 1;
+      return `Nowe oddanie od ${e.studentName || "Studenta"} do zadania ${e.taskTitle || ""} (Etap ${stage})`;
+    });
+  }, [queue, revisionCountByArtifact]);
+  const unreadTeacherNotifications = teacherNotifications.filter((n) => !readTeacherNotifications.has(n));
+  useEffect(() => {
+    try {
+      localStorage.setItem("teacherNotificationsRead", JSON.stringify(Array.from(readTeacherNotifications)));
+    } catch {
+      // ignore
+    }
+  }, [readTeacherNotifications]);
+  useEffect(() => {
+    if (notificationsOpen && unreadTeacherNotifications.length > 0) {
+      setReadTeacherNotifications((prev) => {
+        const next = new Set(prev);
+        unreadTeacherNotifications.forEach((n) => next.add(n));
+        return next;
+      });
+    }
+  }, [notificationsOpen, unreadTeacherNotifications]);
 
   // Pozwalamy edytować także zaakceptowane rewizje (np. poprawa oceny).
   const canGrade = (entry: TeacherQueueEntry | null) => !!entry && !!entry.lastRevisionId;
@@ -465,6 +513,7 @@ export default function OcenianiePage() {
         notifications={teacherNotifications}
         notificationsOpen={notificationsOpen}
         onToggleNotifications={() => setNotificationsOpen((v) => !v)}
+        unreadCount={unreadTeacherNotifications.length}
       />
       <div className="mx-auto max-w-7xl px-5 py-6 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -625,7 +674,7 @@ export default function OcenianiePage() {
                     Status: {statusLabel[selectedEntry.lastRevisionStatus || "SUBMITTED"]}
                   </p>
                   <p className="text-xs text-slate-600">
-                    {selectedEntry.taskTitle || "Zadanie"} · {selectedEntry.stageName || "Etap"} ·{" "}
+                    {selectedEntry.taskTitle || "Zadanie"} · Etap {revisionCountByArtifact[`${selectedEntry.artifactId}:${selectedEntry.studentId}`] || 1} ·{" "}
                     {selectedEntry.artifactName || "Forma zwrotu"}
                   </p>
                 </div>

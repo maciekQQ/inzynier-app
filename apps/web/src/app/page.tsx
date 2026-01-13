@@ -2713,7 +2713,25 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
   const [uploadTarget, setUploadTarget] = useState<{ artifactId: number; taskId: number } | null>(null);
   const [uploadCommentByArtifact, setUploadCommentByArtifact] = useState<Record<number, string>>({});
   const [historyByArtifact, setHistoryByArtifact] = useState<Record<number, any[]>>({});
+  const [revisionCountByArtifact, setRevisionCountByArtifact] = useState<Record<number, number>>({});
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [readStudentNotifications, setReadStudentNotifications] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set();
+    try {
+      const saved = localStorage.getItem("studentNotificationsRead");
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("studentNotificationsRead", JSON.stringify(Array.from(readStudentNotifications)));
+    } catch {
+      // ignore
+    }
+  }, [readStudentNotifications]);
+
   const studentNotifications = useMemo(() => {
     return tasksOverview
       .map((t) => {
@@ -2730,8 +2748,18 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
       })
       .filter(Boolean) as { type: string; message: string }[];
   }, [tasksOverview]);
-  const notificationsCount = studentNotifications.length;
+  const unreadStudentNotifications = studentNotifications.filter((n) => !readStudentNotifications.has(n.message));
+  const notificationsCount = unreadStudentNotifications.length;
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  useEffect(() => {
+    if (notificationsOpen && unreadStudentNotifications.length > 0) {
+      setReadStudentNotifications((prev) => {
+        const next = new Set(prev);
+        unreadStudentNotifications.forEach((n) => next.add(n.message));
+        return next;
+      });
+    }
+  }, [notificationsOpen, unreadStudentNotifications]);
 
   const sessions = useMemo(
     () => Array.from(new Set(tasksOverview.map((t) => t.sessionName).filter(Boolean))) as string[],
@@ -2837,7 +2865,26 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.json())
-      .then((data) => setTasksOverview(Array.isArray(data) ? data : []))
+      .then(async (data) => {
+        const list = Array.isArray(data) ? data : [];
+        setTasksOverview(list);
+        // pobierz liczby rewizji dla każdego artefaktu, aby wyznaczyć etap = liczba zwrotek
+        const counts: Record<number, number> = { ...revisionCountByArtifact };
+        await Promise.all(
+          list.map(async (item) => {
+            if (counts[item.artifactId]) return;
+            try {
+              const hist = await fetch(`${API_URL}/api/revisions/artifact/${item.artifactId}/me`, {
+                headers: { Authorization: `Bearer ${token}` },
+              }).then((r) => r.json());
+              counts[item.artifactId] = Array.isArray(hist) ? hist.length : 1;
+            } catch {
+              counts[item.artifactId] = counts[item.artifactId] || 1;
+            }
+          })
+        );
+        setRevisionCountByArtifact(counts);
+      })
       .catch(() => setTasksOverview([]));
   }, [selectedCourse, token]);
 
@@ -3219,26 +3266,6 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
                     </div>
                   </div>
 
-                  {task.materials && task.materials.length > 0 ? (
-                    <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-                      <p className="text-xs font-semibold text-slate-700">Materiały od nauczyciela:</p>
-                      <ul className="mt-2 space-y-1 text-sm">
-                        {task.materials.map((m: TaskMaterial) => (
-                          <li key={m.id}>
-                            <a
-                              href={m.downloadUrl}
-                              className="text-indigo-600 hover:underline"
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              {m.originalFileName}
-                            </a>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : null}
-
                   <div className="space-y-2">
                     {items.map((item: any) => (
                       <div key={item.artifactId} className="rounded-md border border-slate-200 p-3">
@@ -3259,7 +3286,7 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
                             </div>
                             <div className="text-xs text-slate-600">
                               <p>
-                                Etap: {item.stageName} · Waga etapu: {item.stageWeightPercent}% (udział w ocenie zadania)
+                                Etap: Etap {revisionCountByArtifact[item.artifactId] || 1} · Waga etapu: {item.stageWeightPercent}% (udział w ocenie zadania)
                               </p>
                               <p>
                                 Ostatnia punktacja:{" "}
@@ -3368,6 +3395,9 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
                                       headers: { Authorization: `Bearer ${token}` },
                                     }).then((r) => r.json());
                                     setHistoryByArtifact((h) => ({ ...h, [item.artifactId]: data }));
+      if (Array.isArray(data)) {
+        setRevisionCountByArtifact((prev) => ({ ...prev, [item.artifactId]: data.length }));
+      }
                                   } catch {
                                     setHistoryByArtifact((h) => ({ ...h, [item.artifactId]: [] }));
                                   }
