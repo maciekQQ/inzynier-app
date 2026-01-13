@@ -93,7 +93,7 @@ public class CourseStructureController {
     }
 
     @PostMapping("/tasks")
-    public ResponseEntity<TaskDto> createTask(@Valid @RequestBody CreateTaskRequest request,
+    public ResponseEntity<?> createTask(@Valid @RequestBody CreateTaskRequest request,
                                                @org.springframework.security.core.annotation.AuthenticationPrincipal pl.inzynier.api.user.User user) {
         ClassGroup course = courseRepository.findById(request.courseId())
                 .orElseThrow(() -> new IllegalArgumentException("Course not found"));
@@ -155,7 +155,7 @@ public class CourseStructureController {
     }
 
     @PostMapping("/stages")
-    public ResponseEntity<StageDto> createStage(@Valid @RequestBody CreateStageRequest request) {
+    public ResponseEntity<?> createStage(@Valid @RequestBody CreateStageRequest request) {
         Task task = taskRepository.findById(request.taskId())
                 .orElseThrow(() -> new IllegalArgumentException("Task not found"));
         
@@ -192,7 +192,7 @@ public class CourseStructureController {
     }
 
     @PutMapping("/stages/{stageId}")
-    public ResponseEntity<StageDto> updateStage(@PathVariable Long stageId,
+    public ResponseEntity<?> updateStage(@PathVariable Long stageId,
                                                 @Valid @RequestBody CreateStageRequest request) {
         Stage stage = stageRepository.findById(stageId)
                 .orElseThrow(() -> new IllegalArgumentException("Stage not found"));

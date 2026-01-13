@@ -14,6 +14,7 @@ import pl.inzynier.api.course.CourseRepository;
 import pl.inzynier.api.course.ClassGroup;
 import pl.inzynier.api.queue.GradingQueueEntry;
 import pl.inzynier.api.queue.GradingQueueRepository;
+import pl.inzynier.api.revision.RevisionStatus;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -53,16 +54,18 @@ public class StatsController {
         Map<Long, int[]> counters = new HashMap<>(); // taskId -> [passed, failed, pending]
 
         for (GradingQueueEntry entry : entries) {
-            Artifact artifact = artifactCache.computeIfAbsent(entry.getArtifactId(), id -> artifactRepository.findById(id).orElse(null));
+            Long artifactId = entry.getId() != null ? entry.getId().getArtifactId() : null;
+            if (artifactId == null) continue;
+            Artifact artifact = artifactCache.computeIfAbsent(artifactId, id -> artifactRepository.findById(id).orElse(null));
             if (artifact == null) continue;
             Task task = taskCache.computeIfAbsent(artifact.getStage().getTask().getId(),
                     id -> taskRepository.findById(id).orElse(null));
             if (task == null) continue;
 
             int[] arr = counters.computeIfAbsent(task.getId(), id -> new int[]{0, 0, 0});
-            String status = entry.getLastRevisionStatus();
-            if ("ACCEPTED".equals(status)) arr[0]++; // passed
-            else if ("REJECTED".equals(status)) arr[1]++; // failed
+            RevisionStatus status = entry.getLastRevisionStatus();
+            if (RevisionStatus.ACCEPTED.equals(status)) arr[0]++; // passed
+            else if (RevisionStatus.REJECTED.equals(status)) arr[1]++; // failed
             else arr[2]++; // pending/needs_fix/none
 
             // ensure course cached
