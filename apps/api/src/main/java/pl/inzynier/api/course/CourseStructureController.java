@@ -104,6 +104,8 @@ public class CourseStructureController {
         if (request.startDate().isAfter(request.endDate())) {
             throw new IllegalArgumentException("Data początkowa musi być przed datą końcową");
         }
+        // Walidacja terminów etapu domyślnego (soft >= now, soft <= hard)
+        stageValidator.validateDeadlines(request.startDate(), request.endDate());
         
         Session session = null;
         if (request.sessionId() != null) {

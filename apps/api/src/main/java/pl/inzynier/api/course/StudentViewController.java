@@ -173,20 +173,9 @@ public class StudentViewController {
 
     /**
      * Pomocnicza metoda: sprawdza czy student ma dostęp do zadania.
-     * OPCJA A (kompatybilność wsteczna):
-     * - Jeśli zadanie NIE MA przypisań → wszyscy z kursu widzą
-     * - Jeśli zadanie MA przypisania → tylko przypisani widzą
+     * Zadanie widzi tylko student przypisany (TaskStudent). Brak przypisań = nikt nie widzi.
      */
     private boolean hasAccessToTask(Long taskId, Long studentId) {
-        // Sprawdź czy są jakieś przypisania dla tego zadania
-        long assignmentCount = taskStudentRepository.countByTaskId(taskId);
-        
-        if (assignmentCount == 0) {
-            // OPCJA A: Brak przypisań = wszyscy widzą (kompatybilność wsteczna)
-            return true;
-        } else {
-            // Są przypisania: sprawdź czy student jest na liście
-            return !taskStudentRepository.findByTaskIdAndStudentId(taskId, studentId).isEmpty();
-        }
+        return !taskStudentRepository.findByTaskIdAndStudentId(taskId, studentId).isEmpty();
     }
 }

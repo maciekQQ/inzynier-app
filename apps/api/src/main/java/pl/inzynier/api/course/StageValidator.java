@@ -11,18 +11,21 @@ import java.time.Instant;
 public class StageValidator {
 
     /**
-     * Waliduje, czy softDeadline <= hardDeadline.
+     * Waliduje, czy softDeadline <= hardDeadline oraz softDeadline nie jest w przeszłości.
      * @throws IllegalArgumentException jeśli warunek nie jest spełniony
      */
     public void validateDeadlines(Instant softDeadline, Instant hardDeadline) {
-        if (softDeadline == null || hardDeadline == null) {
-            return; // opcjonalne terminy
+        if (softDeadline != null) {
+            if (softDeadline.isBefore(Instant.now())) {
+                throw new IllegalArgumentException("Termin preferowany nie może być wcześniejszy niż teraz.");
+            }
         }
-        
-        if (softDeadline.isAfter(hardDeadline)) {
-            throw new IllegalArgumentException(
-                "Termin miękki (soft deadline) musi być wcześniejszy lub równy terminowi twardemu (hard deadline)"
-            );
+        if (softDeadline != null && hardDeadline != null) {
+            if (softDeadline.isAfter(hardDeadline)) {
+                throw new IllegalArgumentException(
+                    "Termin miękki (soft deadline) musi być wcześniejszy lub równy terminowi twardemu (hard deadline)"
+                );
+            }
         }
     }
 

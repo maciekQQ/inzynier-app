@@ -197,7 +197,7 @@ export default function Home() {
     <>
       <div className="min-h-screen bg-slate-50 text-slate-900">
         <div className="border-b border-slate-200 bg-white/80 backdrop-blur">
-          <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">
               Panel dydaktyczny
@@ -293,7 +293,7 @@ export default function Home() {
         </div>
         </div>
 
-        <div className="mx-auto max-w-6xl px-4 py-6 space-y-4 flex flex-col items-center">
+        <div className="mx-auto w-full max-w-screen-xl px-6 py-6 space-y-4 flex flex-col items-center">
           {!token || !profile ? (
             <div className="w-full max-w-xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               <form
@@ -2715,6 +2715,8 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
   const [historyByArtifact, setHistoryByArtifact] = useState<Record<number, any[]>>({});
   const [revisionCountByArtifact, setRevisionCountByArtifact] = useState<Record<number, number>>({});
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [taskFilter, setTaskFilter] = useState<"ALL" | "DONE" | "FAILED" | "TODO" | "FIX">("ALL");
+  const [expandedTasks, setExpandedTasks] = useState<Set<number>>(() => new Set());
   const [readStudentNotifications, setReadStudentNotifications] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
     try {
@@ -2765,10 +2767,21 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
     () => Array.from(new Set(tasksOverview.map((t) => t.sessionName).filter(Boolean))) as string[],
     [tasksOverview]
   );
-  const filteredTasks = useMemo(
-    () => (sessionFilter === "ALL" ? tasksOverview : tasksOverview.filter((t) => t.sessionName === sessionFilter)),
-    [tasksOverview, sessionFilter]
-  );
+  const filteredTasks = useMemo(() => {
+    let list = sessionFilter === "ALL" ? tasksOverview : tasksOverview.filter((t) => t.sessionName === sessionFilter);
+    if (taskFilter !== "ALL") {
+      list = list.filter((t) => {
+        const status = t.lastRevisionStatus;
+        const hasSubmission = !!t.lastSubmittedAt;
+        if (taskFilter === "DONE") return status === "ACCEPTED";
+        if (taskFilter === "FAILED") return status === "REJECTED";
+        if (taskFilter === "FIX") return status === "NEEDS_FIX";
+        if (taskFilter === "TODO") return !hasSubmission;
+        return true;
+      });
+    }
+    return list;
+  }, [tasksOverview, sessionFilter, taskFilter]);
 
   useEffect(() => {
     const summaryMap: Record<
@@ -3161,6 +3174,17 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
                 </option>
               ))}
             </select>
+            <select
+              value={taskFilter}
+              onChange={(e) => setTaskFilter(e.target.value as any)}
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            >
+              <option value="ALL">Wszystkie statusy</option>
+              <option value="DONE">Zakończone (zaliczone)</option>
+              <option value="FAILED">Zakończone (niezaliczone)</option>
+              <option value="TODO">Do oddania (brak zwrotki)</option>
+              <option value="FIX">Do poprawy (zwrotka nauczyciela)</option>
+            </select>
           </div>
 
           {(sessionFilter === "ALL" ? uniqueTasks : sessionSummary).length > 0 ? (
@@ -3240,6 +3264,7 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
           ) : (
             Object.entries(groupedTasks).map(([groupKey, items]) => {
               const task = items[0];
+            const isExpanded = expandedTasks.has(task.taskId);
               return (
                 <div key={groupKey} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm space-y-3">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -3264,9 +3289,23 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
                         </p>
                       ) : null}
                     </div>
+                    <button
+                      onClick={() =>
+                        setExpandedTasks((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(task.taskId)) next.delete(task.taskId);
+                          else next.add(task.taskId);
+                          return next;
+                        })
+                      }
+                      className="text-xs font-semibold text-indigo-700 hover:underline"
+                    >
+                      {isExpanded ? "Zwiń" : "Rozwiń"}
+                    </button>
                   </div>
 
-                  <div className="space-y-2">
+                {isExpanded && (
+                <div className="space-y-2">
                     {items.map((item: any) => (
                       <div key={item.artifactId} className="rounded-md border border-slate-200 p-3">
                         <div className="grid gap-4 md:grid-cols-2">
@@ -3285,9 +3324,7 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
                               </span>
                             </div>
                             <div className="text-xs text-slate-600">
-                              <p>
-                                Etap: Etap {revisionCountByArtifact[item.artifactId] || 1} · Waga etapu: {item.stageWeightPercent}% (udział w ocenie zadania)
-                              </p>
+                              <p>Etap: Etap {revisionCountByArtifact[item.artifactId] || 1}</p>
                               <p>
                                 Ostatnia punktacja:{" "}
                                 {item.lastPointsNetto != null
@@ -3509,7 +3546,8 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
                         </div>
                       </div>
                     ))}
-                  </div>
+                </div>
+                )}
                 </div>
               );
             })
