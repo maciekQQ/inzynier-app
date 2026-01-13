@@ -293,9 +293,9 @@ export default function Home() {
         </div>
         </div>
 
-        <div className="mx-auto max-w-6xl px-4 py-6 space-y-4">
+        <div className="mx-auto max-w-6xl px-4 py-6 space-y-4 flex flex-col items-center">
           {!token || !profile ? (
-            <div className="max-w-xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="w-full max-w-xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               <form
                 className="flex flex-col gap-4"
                 onSubmit={onSubmit}
@@ -2721,7 +2721,7 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
           return { type: "NEW_TASK", message: `Nowe zadanie: ${t.taskTitle || t.stageName || "Zadanie"}` };
         }
         if (t.lastRevisionStatus === "NEEDS_FIX") {
-          return { type: "FEEDBACK", message: `Zwrotka do poprawy: ${t.taskTitle || "Zadanie"}` };
+          return { type: "FEEDBACK", message: `Zadanie do poprawy: ${t.taskTitle || "Zadanie"}` };
         }
         if (t.lastRevisionStatus === "ACCEPTED") {
           return { type: "ACCEPTED", message: `Zadanie zaakceptowane: ${t.taskTitle || "Zadanie"}` };
@@ -3287,24 +3287,29 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
                             </div>
                             <div>
                               <p className="text-xs font-semibold text-slate-700">Materiały od nauczyciela:</p>
-                              {task.materials && task.materials.length > 0 ? (
-                                <ul className="mt-1 space-y-1 text-xs">
-                                  {task.materials.map((m: TaskMaterial) => (
-                                    <li key={m.id}>
-                                      <a
-                                        href={m.downloadUrl}
-                                        className="text-indigo-600 hover:underline"
-                                        target="_blank"
-                                        rel="noreferrer"
-                                      >
-                                        {m.originalFileName}
-                                      </a>
-                                    </li>
-                                  ))}
-                                </ul>
-                              ) : (
-                                <p className="text-xs text-slate-500">Brak materiałów.</p>
-                              )}
+                              {(() => {
+                                const feedbackMaterials =
+                                  historyByArtifact[item.artifactId]?.flatMap((h: any) => h.feedbackMaterials || []) || [];
+                                const combined = [...(task.materials || []), ...feedbackMaterials];
+                                return combined.length > 0 ? (
+                                  <ul className="mt-1 space-y-1 text-xs">
+                                    {combined.map((m: any, idx: number) => (
+                                      <li key={m.id ?? `${m.originalFileName}-${idx}`}>
+                                        <a
+                                          href={m.downloadUrl}
+                                          className="text-indigo-600 hover:underline"
+                                          target="_blank"
+                                          rel="noreferrer"
+                                        >
+                                          {m.originalFileName}
+                                        </a>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                ) : (
+                                  <p className="text-xs text-slate-500">Brak materiałów.</p>
+                                );
+                              })()}
                             </div>
                           </div>
 
@@ -3405,7 +3410,23 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
                                                     ({statusLabel[g.statusAfterGrade] || g.statusAfterGrade})
                                                   </span>
                                                 </div>
-                                                {g.comment ? <p className="text-xs">Komentarz: {g.comment}</p> : null}
+                                        {g.comment ? <p className="text-xs">Komentarz: {g.comment}</p> : null}
+                                        {h.feedbackMaterials && h.feedbackMaterials.length > 0 ? (
+                                          <div className="mt-1 space-y-1">
+                                            <p className="text-[11px] font-semibold">Materiały ze zwrotki:</p>
+                                            {h.feedbackMaterials.map((f: any) => (
+                                              <a
+                                                key={f.id}
+                                                href={f.downloadUrl}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="text-[11px] text-indigo-700 hover:underline"
+                                              >
+                                                {f.originalFileName}
+                                              </a>
+                                            ))}
+                                          </div>
+                                        ) : null}
                                               </div>
                                             ))
                                           ) : (

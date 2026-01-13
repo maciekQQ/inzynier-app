@@ -203,7 +203,7 @@ export default function OcenianiePage() {
     }
   }, [selectedGroup]);
 
-  const loadQueue = () => {
+  const loadQueue = (preferred?: { artifactId?: number | null; studentId?: number | null }) => {
     if (!selectedGroup || !token) return;
     setLoadingQueue(true);
     apiFetch<TeacherQueueEntry[]>(
@@ -212,8 +212,15 @@ export default function OcenianiePage() {
     )
       .then((data) => {
         setQueue(data || []);
-        const firstSubmitted = (data || []).find((q) => q.lastSubmittedAt);
-        setSelectedEntry(firstSubmitted || (data || [])[0] || null);
+        const list = data || [];
+        const byPreferred =
+          preferred && preferred.artifactId && preferred.studentId
+            ? list.find(
+                (q) => q.artifactId === preferred.artifactId && q.studentId === preferred.studentId
+              )
+            : null;
+        const firstSubmitted = list.find((q) => q.lastSubmittedAt);
+        setSelectedEntry(byPreferred || firstSubmitted || list[0] || null);
         setMsg(null);
       })
       .catch(() => {
@@ -282,8 +289,8 @@ export default function OcenianiePage() {
     );
   }, [queue]);
 
-  const canGrade = (entry: TeacherQueueEntry | null) =>
-    !!entry && !!entry.lastRevisionId && entry.lastRevisionStatus === "SUBMITTED";
+  // Pozwalamy edytować także zaakceptowane rewizje (np. poprawa oceny).
+  const canGrade = (entry: TeacherQueueEntry | null) => !!entry && !!entry.lastRevisionId;
 
   const currentTaskMode =
     selectedEntry ? tasks.find((t) => t.id === selectedEntry.taskId)?.gradingMode || "PERCENT" : "PERCENT";
@@ -295,6 +302,13 @@ export default function OcenianiePage() {
     selectedEntry && tasks.find((t) => t.id === selectedEntry.taskId)?.passThreshold != null
       ? tasks.find((t) => t.id === selectedEntry.taskId)?.passThreshold
       : null;
+
+  const belowPassWarning = useMemo(() => {
+    if (gradeForm.status !== "ACCEPTED") return false;
+    if (currentPassThreshold == null) return false;
+    const pts = Number(gradeForm.points || 0);
+    return pts < currentPassThreshold;
+  }, [gradeForm.points, gradeForm.status, currentPassThreshold]);
 
   // Liczymy spóźnienie tylko dla pierwszej przesłanej pracy (pierwsza rewizja), kolejne poprawki nie dodają spóźnienia.
   const firstSubmissionDate = useMemo(() => {
@@ -392,6 +406,15 @@ export default function OcenianiePage() {
     }
     try {
       setMsg("Wysyłam ocenę...");
+      if (belowPassWarning) {
+        const ok = window.confirm(
+          "Akceptujesz pracę z punktacją poniżej progu zaliczenia. Kontynuować?"
+        );
+        if (!ok) {
+          setMsg("Anulowano zapis oceny.");
+          return;
+        }
+      }
       if (gradeForm.status === "NEEDS_FIX" && feedbackFile) {
         await handleFeedbackUpload(selectedEntry.lastRevisionId);
       }
@@ -416,7 +439,7 @@ export default function OcenianiePage() {
         throw new Error(txt || res.statusText);
       }
       setMsg("Ocena zapisana. Odświeżam listę...");
-      loadQueue();
+      loadQueue({ artifactId: selectedEntry.artifactId, studentId: selectedEntry.studentId });
     } catch (e) {
       setMsg("Błąd: " + (e as Error).message);
     }
@@ -671,13 +694,18 @@ export default function OcenianiePage() {
                     onChange={(e) => setGradeForm((f) => ({ ...f, points: e.target.value }))}
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                   />
-                  <div className="mt-1 flex items-center gap-2 text-[11px] text-slate-600">
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
                     <span className="rounded-md bg-slate-100 px-2 py-1 font-semibold text-slate-700">
                       {currentTaskMode === "POINTS10" ? `Skala 1-${currentTaskMax || 10}` : "Skala 1-100%"}
                     </span>
                     <span className="text-[11px] text-slate-600">
                       Kary są tylko informacyjne – punkty wpisuje nauczyciel.
                     </span>
+                    {belowPassWarning && (
+                      <span className="rounded-md bg-amber-100 px-2 py-1 font-semibold text-amber-800">
+                        Poniżej progu: zaakceptujesz mimo braku zaliczenia
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="md:col-span-1">
