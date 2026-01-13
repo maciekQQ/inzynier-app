@@ -534,7 +534,7 @@ export default function OcenianiePage() {
               ))}
             </select>
             <button
-              onClick={loadQueue}
+              onClick={() => loadQueue()}
               className="rounded-md bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-200"
             >
               Odśwież
