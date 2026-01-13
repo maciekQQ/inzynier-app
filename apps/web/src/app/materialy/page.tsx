@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { API_URL, apiFetch } from "../lib/api";
+import { Toast } from "../components/Toast";
 
 type ClassGroup = { id: number; name: string; studentCount?: number; teacherCount?: number };
 type Task = { id: number; title: string; description?: string; sessionName?: string; sessionId?: number; gradingMode?: string; endDate?: string; startDate?: string; maxPoints?: number; passThreshold?: number | null };
@@ -412,38 +413,16 @@ export default function MaterialyPage() {
                 </select>
                 {selectedTask ? (
                   <div className="mt-2 text-xs text-slate-600 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-[2px] text-[11px] font-semibold text-indigo-700">
-                        {tasks.find((t) => t.id === selectedTask)?.gradingMode === "POINTS10"
-                          ? `Punkty (1-${tasks.find((t) => t.id === selectedTask)?.maxPoints || 10})`
-                          : "Procent"}
-                      </span>
-                      {hasSubmissions ? (
-                        <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-[2px] text-[11px] font-semibold text-amber-700">
-                          Ma oddania
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-[2px] text-[11px] font-semibold text-emerald-700">
-                          Bez oddań
-                        </span>
-                      )}
-                    </div>
                     <p className="text-[11px] text-slate-500">
-                      Termin preferowany jest blokowany po pierwszym oddaniu. Możesz zawsze zmienić termin ostateczny.
+                      Termin preferowany jest blokowany po pierwszym oddaniu. Zawsze możesz zmienić termin ostateczny, nawet gdy są oddania.
                     </p>
                   </div>
                 ) : (
                   <p className="mt-2 text-xs text-slate-500">Wybierz zadanie, aby edytować szczegóły.</p>
                 )}
               </div>
-              <div className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-xs text-amber-800 shadow-sm">
-                Wskazówka: zmiana terminu ostatecznego jest zawsze dostępna, nawet przy oddaniach.
-              </div>
-              {msg && (
-                <div className="rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 text-sm text-indigo-900 shadow-sm">
-                  {msg}
-                </div>
-              )}
+              {/* Usunięto powtórzoną wskazówkę, scalono z tekstem nad formularzem */}
+              {msg && <Toast message={msg} onClose={() => setMsg(null)} />}
             </aside>
 
             <main className="space-y-4">
@@ -601,11 +580,7 @@ export default function MaterialyPage() {
           </div>
         )}
 
-        {msg && (
-          <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
-            <p className="text-sm text-indigo-900">{msg}</p>
-          </div>
-        )}
+        {msg && <Toast message={msg} onClose={() => setMsg(null)} />}
       </div>
       <PageFooter />
     </div>

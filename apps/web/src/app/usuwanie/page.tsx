@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { API_URL, apiFetch } from "../lib/api";
+import { Toast } from "../components/Toast";
 
 type ClassGroup = { id: number; name: string; studentCount?: number; teacherCount?: number };
 type Task = { id: number; title: string; description?: string; sessionName?: string; sessionId?: number; gradingMode?: string; endDate?: string; startDate?: string; maxPoints?: number; passThreshold?: number | null };
@@ -338,11 +339,7 @@ export default function UsuwaniePage() {
         </div>
       )}
 
-      {msg && (
-        <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
-          <p className="text-sm text-indigo-900">{msg}</p>
-        </div>
-      )}
+      {msg && <Toast message={msg} onClose={() => setMsg(null)} />}
     </div>
       <PageFooter />
     </div>

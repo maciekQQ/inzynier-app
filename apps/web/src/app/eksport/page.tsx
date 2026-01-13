@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { API_URL, apiFetch } from "../lib/api";
+import { Toast } from "../components/Toast";
 
 type ClassGroup = { id: number; name: string; studentCount?: number; teacherCount?: number };
 type Profile = { id: number; firstName: string; lastName: string; role: "TEACHER" | "STUDENT" | "ADMIN" };
@@ -238,11 +239,7 @@ export default function EksportPage() {
             <div className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-xs text-amber-800 shadow-sm">
               CSV szczegółowe = wszystkie prace i statusy. CSV końcowe = wyniki końcowe. ZIP = komplet plików i CSV.
             </div>
-            {msg && (
-              <div className="rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 text-sm text-indigo-900 shadow-sm">
-                {msg}
-              </div>
-            )}
+            {msg && <Toast message={msg} onClose={() => setMsg(null)} />}
           </aside>
 
           <main className="space-y-4">

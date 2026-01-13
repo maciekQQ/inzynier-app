@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { API_URL, apiFetch } from "./lib/api";
+import { Toast } from "./components/Toast";
 
 type LoginState = {
   email: string;
@@ -379,13 +380,15 @@ export default function Home() {
             </div>
           )}
 
-          {content ? (
-            content
-          ) : (
-            <p className="mt-4 text-sm text-slate-600">
-              Zaloguj się, aby zobaczyć dane.
-            </p>
-          )}
+          <div className="w-full">
+            {content ? (
+              content
+            ) : (
+              <p className="mt-4 text-sm text-slate-600">
+                Zaloguj się, aby zobaczyć dane.
+              </p>
+            )}
+          </div>
         </div>
       </div>
     <style jsx global>{`
@@ -2674,11 +2677,7 @@ function TeacherView({
         </>
       )}
 
-      {msg && (
-        <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
-          <p className="text-sm text-indigo-900">{msg}</p>
-        </div>
-      )}
+      {msg && <Toast message={msg} onClose={() => setMsg(null)} />}
     </div>
   );
 }
