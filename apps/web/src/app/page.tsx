@@ -2690,8 +2690,20 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
   const [tasksOverview, setTasksOverview] = useState<any[]>([]);
   const [sessionFilter, setSessionFilter] = useState<string>("ALL");
   const [sessionSummary, setSessionSummary] = useState<
-    { sessionName: string; total: number; max: number; pct: number; passedCount: number; taskCount: number }[]
+    {
+      sessionName: string;
+      mode: "POINTS" | "PERCENT";
+      total: number;
+      max: number;
+      pct: number;
+      passedCount: number;
+      taskCount: number;
+      passThreshold?: number | null;
+      maxPoints?: number | null;
+    }[]
   >([]);
+
+  const uniqueTasks = useMemo(() => Array.from(new Map(tasksOverview.map((t) => [t.taskId, t])).values()), [tasksOverview]);
   const [changePasswordForm, setChangePasswordForm] = useState({
     oldPassword: "",
     newPassword: "",
@@ -2733,27 +2745,66 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
   useEffect(() => {
     const summaryMap: Record<
       string,
-      { sessionName: string; total: number; max: number; passedCount: number; taskCount: number }
+      {
+        sessionName: string;
+        mode: "POINTS" | "PERCENT";
+        total: number;
+        max: number;
+        passedCount: number;
+        taskCount: number;
+        passThreshold?: number | null;
+        maxPoints?: number | null;
+      }
     > = {};
+
     filteredTasks.forEach((t) => {
       const key = t.sessionName || "Zadania pojedyncze";
       if (!summaryMap[key]) {
-        summaryMap[key] = { sessionName: key, total: 0, max: 0, passedCount: 0, taskCount: 0 };
+        summaryMap[key] = {
+          sessionName: key,
+          mode: t.gradingMode === "POINTS10" ? "POINTS" : "PERCENT",
+          total: 0,
+          max: 0,
+          passedCount: 0,
+          taskCount: 0,
+          passThreshold: t.passThreshold ?? null,
+          maxPoints: t.maxPoints ?? null,
+        };
       }
+      const bucket = summaryMap[key];
       const isPoints = t.gradingMode === "POINTS10";
       const max = isPoints ? t.maxPoints || 10 : 100;
       const val = t.lastPointsNetto != null ? t.lastPointsNetto : 0;
-      summaryMap[key].total += val;
-      summaryMap[key].max += max;
-      summaryMap[key].taskCount += 1;
+
+      if (isPoints) {
+        bucket.total += val;
+        bucket.max += max;
+      } else {
+        // procenty: sumujemy (ograniczone do 100) i uśredniamy na końcu, max prezentacyjny = 100
+        bucket.total += Math.min(100, val);
+      }
+      bucket.taskCount += 1;
       if (t.passThreshold != null && val >= t.passThreshold) {
-        summaryMap[key].passedCount += 1;
+        bucket.passedCount += 1;
+      }
+      if (t.passThreshold != null) {
+        bucket.passThreshold = bucket.passThreshold == null ? t.passThreshold : Math.max(bucket.passThreshold, t.passThreshold);
+      }
+      if (bucket.maxPoints == null && t.maxPoints != null) {
+        bucket.maxPoints = t.maxPoints;
       }
     });
-    const arr = Object.values(summaryMap).map((s) => ({
-      ...s,
-      pct: s.max > 0 ? Math.round((s.total / s.max) * 100) : 0,
-    }));
+
+    const arr = Object.values(summaryMap).map((s) => {
+      if (s.mode === "POINTS") {
+        const pct = s.max > 0 ? Math.round((s.total / s.max) * 100) : 0;
+        return { ...s, pct, max: s.max };
+      }
+      // procenty: pokazujemy średnią procentową, max = 100
+      const avg = s.taskCount > 0 ? s.total / s.taskCount : 0;
+      return { ...s, total: avg, max: 100, pct: Math.round(avg) };
+    });
+
     setSessionSummary(arr);
   }, [filteredTasks]);
 
@@ -3065,24 +3116,65 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
             </select>
           </div>
 
-          {sessionSummary.length > 0 ? (
+          {(sessionFilter === "ALL" ? uniqueTasks : sessionSummary).length > 0 ? (
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
               <p className="font-semibold text-slate-800 mb-2">Podsumowanie przedmiotów / zadań</p>
               <div className="grid gap-2 md:grid-cols-2">
-                {sessionSummary.map((s) => (
-                  <div key={s.sessionName} className="rounded border border-slate-200 bg-white px-3 py-2 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-slate-900">{s.sessionName}</span>
-                      <span className="text-indigo-700 font-semibold">{s.pct}%</span>
-                    </div>
-                    <p className="text-slate-700">
-                      Suma: {Math.round(s.total * 100) / 100} / {s.max} ({s.pct}%)
-                    </p>
-                    <p className="text-slate-700">
-                      Zaliczone zadania: {s.passedCount}/{s.taskCount}
-                    </p>
-                  </div>
-                ))}
+                {sessionFilter === "ALL"
+                  ? uniqueTasks.map((t) => {
+                      const isPoints = t.gradingMode === "POINTS10";
+                      const max = isPoints ? t.maxPoints || 10 : 100;
+                      const valRaw = t.lastPointsNetto ?? 0;
+                      const val = isPoints ? valRaw : Math.min(100, valRaw);
+                      const pct = isPoints ? Math.round(((val || 0) / max) * 100) : Math.round(Math.min(100, val || 0));
+                      const passLabel =
+                        t.passThreshold != null
+                          ? isPoints
+                            ? `Próg: ${t.passThreshold}/${max} pkt`
+                            : `Próg: ${t.passThreshold}%`
+                          : "Próg: brak";
+                      return (
+                        <div key={`${t.taskId}-${t.artifactId}`} className="rounded border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-slate-900">
+                              {t.taskTitle
+                                ? t.sessionName
+                                  ? `${t.sessionName} · ${t.taskTitle}`
+                                  : t.taskTitle
+                                : t.sessionName || `Zadanie ${t.taskId}`}
+                            </span>
+                            <span className="text-indigo-700 font-semibold">{pct}%</span>
+                          </div>
+                          <p className="text-slate-700">
+                            Suma: {Math.round((val || 0) * 100) / 100} / {max} {isPoints ? "pkt" : "%"}
+                          </p>
+                          <p className="text-slate-700">{passLabel}</p>
+                        </div>
+                      );
+                    })
+                  : sessionSummary.map((s) => {
+                      const isPoints = s.mode === "POINTS";
+                    const displayMax = isPoints ? s.max || s.maxPoints || 0 : 100;
+                    const passLabel =
+                        s.passThreshold != null
+                          ? isPoints
+                            ? `Próg: ${s.passThreshold}/${displayMax || ""} pkt`
+                            : `Próg: ${s.passThreshold}%`
+                          : "Próg: brak";
+                      return (
+                        <div key={s.sessionName} className="rounded border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-slate-900">{s.sessionName}</span>
+                            <span className="text-indigo-700 font-semibold">{s.pct}%</span>
+                          </div>
+                          <p className="text-slate-700">
+                          Suma: {Math.round(s.total * 100) / 100} / {displayMax} {isPoints ? "pkt" : "%"} ({s.pct}%)
+                          </p>
+                          <p className="text-slate-700">Zaliczone zadania: {s.passedCount}/{s.taskCount}</p>
+                          <p className="text-slate-700">{passLabel}</p>
+                        </div>
+                      );
+                    })}
               </div>
             </div>
           ) : null}
