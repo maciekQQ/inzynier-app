@@ -53,6 +53,23 @@ html.contrast-high1 body {
   background: #0b1220;
   color: #f8fafc;
 }
+html.contrast-high1 input,
+html.contrast-high1 select,
+html.contrast-high1 textarea {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-color: #94a3b8 !important;
+}
+html.contrast-high1 input::placeholder,
+html.contrast-high1 textarea::placeholder {
+  color: #cbd5e1 !important;
+}
+html.contrast-high1 input:focus,
+html.contrast-high1 select:focus,
+html.contrast-high1 textarea:focus {
+  border-color: #e5e7eb !important;
+  box-shadow: 0 0 0 2px rgba(229, 231, 235, 0.3) !important;
+}
 html.contrast-high1 .bg-white,
 html.contrast-high1 .bg-slate-50,
 html.contrast-high1 .bg-gray-50 {
@@ -76,6 +93,13 @@ html.contrast-high1 .border-gray-200,
 html.contrast-high1 .border-gray-300 {
   border-color: #334155 !important;
 }
+html.contrast-high1 .bg-slate-100,
+html.contrast-high1 .bg-gray-100 {
+  background-color: #1f2937 !important;
+}
+html.contrast-high1 .text-indigo-700 {
+  color: #c7d2fe !important;
+}
 html.contrast-high1 a {
   color: #a5b4fc;
 }
@@ -84,6 +108,23 @@ html.contrast-high1 a {
 html.contrast-high2 body {
   background: #000000;
   color: #fef08a;
+}
+html.contrast-high2 input,
+html.contrast-high2 select,
+html.contrast-high2 textarea {
+  background-color: #000000 !important;
+  color: #fef08a !important;
+  border-color: #f59e0b !important;
+}
+html.contrast-high2 input::placeholder,
+html.contrast-high2 textarea::placeholder {
+  color: #fcd34d !important;
+}
+html.contrast-high2 input:focus,
+html.contrast-high2 select:focus,
+html.contrast-high2 textarea:focus {
+  border-color: #facc15 !important;
+  box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.35) !important;
 }
 html.contrast-high2 .bg-white,
 html.contrast-high2 .bg-slate-50,
@@ -107,6 +148,13 @@ html.contrast-high2 .border-slate-300,
 html.contrast-high2 .border-gray-200,
 html.contrast-high2 .border-gray-300 {
   border-color: #fbbf24 !important;
+}
+html.contrast-high2 .bg-slate-100,
+html.contrast-high2 .bg-gray-100 {
+  background-color: #111111 !important;
+}
+html.contrast-high2 .text-indigo-700 {
+  color: #fcd34d !important;
 }
 html.contrast-high2 a {
   color: #fcd34d;
