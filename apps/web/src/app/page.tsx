@@ -3413,7 +3413,7 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
                                         {g.comment ? <p className="text-xs">Komentarz: {g.comment}</p> : null}
                                         {h.feedbackMaterials && h.feedbackMaterials.length > 0 ? (
                                           <div className="mt-1 space-y-1">
-                                            <p className="text-[11px] font-semibold">Materiały ze zwrotki:</p>
+                                            <p className="text-[11px] font-semibold">Materiały dodatkowe:</p>
                                             {h.feedbackMaterials.map((f: any) => (
                                               <a
                                                 key={f.id}
@@ -3465,22 +3465,8 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
                                                 </a>
                                               ) : null}
                                             </p>
-                            {h.feedbackMaterials && h.feedbackMaterials.length > 0 ? (
-                              <div className="mt-1 space-y-1">
-                                <p className="text-[11px] font-semibold text-slate-700">Materiały od nauczyciela:</p>
-                                {h.feedbackMaterials.map((f: any) => (
-                                  <a
-                                    key={f.id}
-                                    href={f.downloadUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-[11px] text-indigo-700 hover:underline"
-                                  >
-                                    {f.originalFileName}
-                                  </a>
-                                ))}
-                              </div>
-                            ) : null}
+                            {/* Materiały ze zwrotki pokazujemy tylko po stronie ocen (żółta karta),
+                                w historii po stronie studenta ten blok ukryty, żeby nie dublować */}
                                           </div>
                                         </div>
                                       </div>

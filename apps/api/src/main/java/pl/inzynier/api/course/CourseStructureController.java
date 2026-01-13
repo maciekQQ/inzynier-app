@@ -30,6 +30,7 @@ public class CourseStructureController {
     private final AuditService auditService;
     private final CourseTeacherRepository courseTeacherRepository;
     private final TaskMaterialRepository taskMaterialRepository;
+    private final StageExemptionRepository stageExemptionRepository;
     private final StorageService storageService;
     private final SessionRepository sessionRepository;
     private final TaskStudentRepository taskStudentRepository;
@@ -45,7 +46,8 @@ public class CourseStructureController {
                                      TaskMaterialRepository taskMaterialRepository,
                                      StorageService storageService,
                                      SessionRepository sessionRepository,
-                                     TaskStudentRepository taskStudentRepository) {
+                                     TaskStudentRepository taskStudentRepository,
+                                     StageExemptionRepository stageExemptionRepository) {
         this.courseRepository = courseRepository;
         this.taskRepository = taskRepository;
         this.stageRepository = stageRepository;
@@ -58,6 +60,7 @@ public class CourseStructureController {
         this.storageService = storageService;
         this.sessionRepository = sessionRepository;
         this.taskStudentRepository = taskStudentRepository;
+        this.stageExemptionRepository = stageExemptionRepository;
     }
     
     /**
@@ -299,6 +302,17 @@ public class CourseStructureController {
         }
 
         tasks.forEach(t -> taskStudentRepository.deleteAll(taskStudentRepository.findByTaskId(t.getId())));
+
+        // usuwamy zależności: materiały zadania, artefakty/etapy, zwolnienia z etapu
+        for (Task t : tasks) {
+            taskMaterialRepository.deleteAll(taskMaterialRepository.findByTaskId(t.getId()));
+            List<Stage> stages = stageRepository.findByTaskId(t.getId());
+            for (Stage stage : stages) {
+                stageExemptionRepository.deleteAll(stageExemptionRepository.findByStageId(stage.getId()));
+                artifactRepository.deleteAll(artifactRepository.findByStageId(stage.getId()));
+            }
+            stageRepository.deleteAll(stages);
+        }
 
         taskRepository.deleteAll(tasks);
 
