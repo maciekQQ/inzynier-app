@@ -90,14 +90,21 @@ public class Revision {
     }
 
     /**
-     * Dozwolone przejścia:
-     * SUBMITTED -> NEEDS_FIX, ACCEPTED, REJECTED
-     * NEEDS_FIX -> SUBMITTED (ponowne złożenie)
-     * ACCEPTED, REJECTED są terminalne.
+     * Dozwolone przejścia (rozszerzone o edycję i ponowne otwarcie):
+     * - SUBMITTED -> NEEDS_FIX, ACCEPTED, REJECTED
+     * - NEEDS_FIX -> SUBMITTED (ponowne złożenie)
+     * - ACCEPTED/REJECTED -> NEEDS_FIX (ponowne otwarcie zadania) lub pozostanie w tym samym stanie (edycja oceny)
      */
     public void transitionTo(RevisionStatus target) {
-        if (this.status == RevisionStatus.ACCEPTED || this.status == RevisionStatus.REJECTED) {
-            throw new IllegalStateException("Revision is terminal, cannot change status");
+        // no-op when status się nie zmienia (edycja oceny bez zmiany statusu)
+        if (this.status == target) {
+            return;
+        }
+        // pozwól na ponowne otwarcie: ACCEPTED/REJECTED -> NEEDS_FIX
+        if ((this.status == RevisionStatus.ACCEPTED || this.status == RevisionStatus.REJECTED)
+                && target == RevisionStatus.NEEDS_FIX) {
+            this.status = target;
+            return;
         }
         if (this.status == RevisionStatus.SUBMITTED) {
             if (target == RevisionStatus.NEEDS_FIX || target == RevisionStatus.ACCEPTED || target == RevisionStatus.REJECTED) {

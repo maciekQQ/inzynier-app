@@ -6,6 +6,7 @@ import java.util.List;
 
 public interface RevisionRepository extends JpaRepository<Revision, Long> {
     List<Revision> findByArtifactIdAndStudentIdOrderByCreatedAtDesc(Long artifactId, Long studentId);
+    List<Revision> findByArtifactId(Long artifactId);
 }
 
 

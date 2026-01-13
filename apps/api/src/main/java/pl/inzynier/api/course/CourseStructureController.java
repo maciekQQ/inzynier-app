@@ -9,6 +9,9 @@ import org.springframework.web.bind.annotation.*;
 import pl.inzynier.api.audit.AuditService;
 import pl.inzynier.api.course.dto.*;
 import pl.inzynier.api.storage.StorageService;
+import pl.inzynier.api.revision.RevisionRepository;
+import pl.inzynier.api.revision.RevisionFeedbackMaterialRepository;
+import pl.inzynier.api.grade.GradeRepository;
 
 import java.time.Duration;
 import java.util.List;
@@ -34,6 +37,9 @@ public class CourseStructureController {
     private final StorageService storageService;
     private final SessionRepository sessionRepository;
     private final TaskStudentRepository taskStudentRepository;
+    private final RevisionRepository revisionRepository;
+    private final GradeRepository gradeRepository;
+    private final RevisionFeedbackMaterialRepository revisionFeedbackMaterialRepository;
 
     public CourseStructureController(CourseRepository courseRepository,
                                      TaskRepository taskRepository,
@@ -47,7 +53,10 @@ public class CourseStructureController {
                                      StorageService storageService,
                                      SessionRepository sessionRepository,
                                      TaskStudentRepository taskStudentRepository,
-                                     StageExemptionRepository stageExemptionRepository) {
+                                     StageExemptionRepository stageExemptionRepository,
+                                     RevisionRepository revisionRepository,
+                                     GradeRepository gradeRepository,
+                                     RevisionFeedbackMaterialRepository revisionFeedbackMaterialRepository) {
         this.courseRepository = courseRepository;
         this.taskRepository = taskRepository;
         this.stageRepository = stageRepository;
@@ -61,6 +70,9 @@ public class CourseStructureController {
         this.sessionRepository = sessionRepository;
         this.taskStudentRepository = taskStudentRepository;
         this.stageExemptionRepository = stageExemptionRepository;
+        this.revisionRepository = revisionRepository;
+        this.gradeRepository = gradeRepository;
+        this.revisionFeedbackMaterialRepository = revisionFeedbackMaterialRepository;
     }
     
     /**
@@ -303,12 +315,21 @@ public class CourseStructureController {
 
         tasks.forEach(t -> taskStudentRepository.deleteAll(taskStudentRepository.findByTaskId(t.getId())));
 
-        // usuwamy zależności: materiały zadania, artefakty/etapy, zwolnienia z etapu
+        // usuwamy zależności: materiały zadania, oceny/rewizje/materiały feedback, artefakty/etapy, zwolnienia z etapu
         for (Task t : tasks) {
             taskMaterialRepository.deleteAll(taskMaterialRepository.findByTaskId(t.getId()));
             List<Stage> stages = stageRepository.findByTaskId(t.getId());
             for (Stage stage : stages) {
                 stageExemptionRepository.deleteAll(stageExemptionRepository.findByStageId(stage.getId()));
+                // usuń rewizje i powiązane zasoby dla wszystkich artefaktów etapu
+                artifactRepository.findByStageId(stage.getId()).forEach(artifact -> {
+                    var revisions = revisionRepository.findByArtifactId(artifact.getId());
+                    revisions.forEach(rev -> {
+                        gradeRepository.deleteAll(gradeRepository.findByRevisionId(rev.getId()));
+                        revisionFeedbackMaterialRepository.deleteAll(revisionFeedbackMaterialRepository.findByRevisionIdOrderByCreatedAtDesc(rev.getId()));
+                    });
+                    revisionRepository.deleteAll(revisions);
+                });
                 artifactRepository.deleteAll(artifactRepository.findByStageId(stage.getId()));
             }
             stageRepository.deleteAll(stages);
