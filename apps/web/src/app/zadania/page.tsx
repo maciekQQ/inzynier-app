@@ -115,6 +115,16 @@ export default function ZadaniaPage() {
   const [groups, setGroups] = useState<ClassGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<number | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const hasError = useMemo(
+    () =>
+      msg != null &&
+      (msg.toLowerCase().includes("błąd") ||
+        msg.includes("Uzupełnij") ||
+        msg.includes("Termin ostateczny") ||
+        msg.includes("Liczba kart") ||
+        msg.includes("Wybierz grupę")),
+    [msg]
+  ); // WCAG 3.3.1
 
   const [newTask, setNewTask] = useState({ title: "", description: "", soft: "", hard: "", gradingMode: "PERCENT", maxPoints: 10, passThreshold: "" as number | string | undefined });
   const [newSession, setNewSession] = useState({
@@ -451,6 +461,8 @@ export default function ZadaniaPage() {
                 setSelectedGroup(v === "" ? null : Number(v));
               }}
               className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+              aria-invalid={hasError ? "true" : "false"} // WCAG 3.3.1
+              aria-describedby={hasError ? "task-error-msg" : undefined} // WCAG 4.1.3
             >
               <option value="">-- wybierz --</option>
               {groups.map((g) => (
@@ -468,6 +480,15 @@ export default function ZadaniaPage() {
           </div>
         ) : (
           <div className="space-y-4">
+            {hasError && (
+              <p
+                id="task-error-msg" // WCAG 4.1.3
+                role="alert"
+                className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-900"
+              >
+                {msg}
+              </p>
+            )}
             {/* Pojedyncze zadanie */}
             <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
               <div className="flex items-center justify-between">
@@ -485,6 +506,8 @@ export default function ZadaniaPage() {
                     onChange={(e) => setNewTask((t) => ({ ...t, title: e.target.value }))}
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                     placeholder="Np. Zadanie 1"
+                    aria-invalid={hasError ? "true" : "false"} // WCAG 3.3.1
+                    aria-describedby={hasError ? "task-error-msg" : undefined} // WCAG 4.1.3
                   />
                 </div>
                 <div>
@@ -497,6 +520,8 @@ export default function ZadaniaPage() {
                     onChange={(e) => setNewTask((t) => ({ ...t, description: e.target.value }))}
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                     placeholder="Instrukcja dla studentów"
+                    aria-invalid={hasError ? "true" : "false"} // WCAG 3.3.1
+                    aria-describedby={hasError ? "task-error-msg" : undefined} // WCAG 4.1.3
                   />
                 </div>
                 <div>
@@ -509,6 +534,8 @@ export default function ZadaniaPage() {
                     value={newTask.soft}
                     onChange={(e) => setNewTask((t) => ({ ...t, soft: e.target.value }))}
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    aria-invalid={hasError ? "true" : "false"} // WCAG 3.3.1
+                    aria-describedby={hasError ? "task-error-msg" : undefined} // WCAG 4.1.3
                   />
                 </div>
                 <div>
@@ -521,6 +548,8 @@ export default function ZadaniaPage() {
                     value={newTask.hard}
                     onChange={(e) => setNewTask((t) => ({ ...t, hard: e.target.value }))}
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    aria-invalid={hasError ? "true" : "false"} // WCAG 3.3.1
+                    aria-describedby={hasError ? "task-error-msg" : undefined} // WCAG 4.1.3
                   />
                 </div>
                 <div>
@@ -532,6 +561,8 @@ export default function ZadaniaPage() {
                     value={newTask.gradingMode}
                     onChange={(e) => setNewTask((t) => ({ ...t, gradingMode: e.target.value }))}
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    aria-invalid={hasError ? "true" : "false"} // WCAG 3.3.1
+                    aria-describedby={hasError ? "task-error-msg" : undefined} // WCAG 4.1.3
                   >
                     <option value="PERCENT">Procentowa (1-100)</option>
                     <option value="POINTS10">Punktowa (1-x)</option>
@@ -550,6 +581,8 @@ export default function ZadaniaPage() {
                       value={newTask.maxPoints}
                       onChange={(e) => setNewTask((t) => ({ ...t, maxPoints: Number(e.target.value) }))}
                       className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      aria-invalid={hasError ? "true" : "false"} // WCAG 3.3.1
+                      aria-describedby={hasError ? "task-error-msg" : undefined} // WCAG 4.1.3
                     />
                   </div>
                 ) : null}
@@ -566,6 +599,8 @@ export default function ZadaniaPage() {
                     onChange={(e) => setNewTask((t) => ({ ...t, passThreshold: e.target.value === "" ? "" : Number(e.target.value) }))}
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                     placeholder={newTask.gradingMode === "POINTS10" ? "np. 6" : "np. 51"}
+                      aria-invalid={hasError ? "true" : "false"} // WCAG 3.3.1
+                      aria-describedby={hasError ? "task-error-msg" : undefined} // WCAG 4.1.3
                   />
                 </div>
               </div>
@@ -597,6 +632,8 @@ export default function ZadaniaPage() {
                     onChange={(e) => setNewSession((s) => ({ ...s, name: e.target.value }))}
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                     placeholder="Laboratorium 1"
+                    aria-invalid={hasError ? "true" : "false"} // WCAG 3.3.1
+                    aria-describedby={hasError ? "task-error-msg" : undefined} // WCAG 4.1.3
                   />
                 </div>
                 <div>
@@ -608,6 +645,8 @@ export default function ZadaniaPage() {
                     value={newSession.type}
                     onChange={(e) => setNewSession((s) => ({ ...s, type: e.target.value }))}
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    aria-invalid={hasError ? "true" : "false"} // WCAG 3.3.1
+                    aria-describedby={hasError ? "task-error-msg" : undefined} // WCAG 4.1.3
                   >
                     <option value="LAB">Laboratorium</option>
                     <option value="LECTURE">Wykład</option>
@@ -648,6 +687,8 @@ export default function ZadaniaPage() {
                       setSessionTasksPage(0);
                     }}
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    aria-invalid={hasError ? "true" : "false"} // WCAG 3.3.1
+                    aria-describedby={hasError ? "task-error-msg" : undefined} // WCAG 4.1.3
                   />
                 </div>
               </div>
@@ -661,6 +702,8 @@ export default function ZadaniaPage() {
                     value={newSession.gradingMode}
                     onChange={(e) => setNewSession((s) => ({ ...s, gradingMode: e.target.value }))}
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    aria-invalid={hasError ? "true" : "false"} // WCAG 3.3.1
+                    aria-describedby={hasError ? "task-error-msg" : undefined} // WCAG 4.1.3
                   >
                     <option value="PERCENT">Procentowa (1-100)</option>
                     <option value="POINTS10">Punktowa (1-x)</option>
@@ -683,6 +726,8 @@ export default function ZadaniaPage() {
                   }}
                   className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                   placeholder={newSession.gradingMode === "POINTS10" ? "np. 25" : "np. 60"}
+                  aria-invalid={hasError ? "true" : "false"} // WCAG 3.3.1
+                  aria-describedby={hasError ? "task-error-msg" : undefined} // WCAG 4.1.3
                 />
                 <p className="mt-1 text-[11px] text-slate-500">
                   To próg zaliczenia przedmiotu; każde zadanie może mieć własny próg i max punktów w konfiguracji poniżej.

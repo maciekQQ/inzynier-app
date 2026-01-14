@@ -211,10 +211,11 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-2 flex-wrap" aria-live="polite">
             <span
+              // WCAG 1.4.3 – wzmocniony kontrast statusu API
               className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${
                 health === "ok"
-                  ? "bg-emerald-100 text-emerald-800"
-                  : "bg-amber-100 text-amber-800"
+                  ? "bg-emerald-50 text-emerald-900"
+                  : "bg-amber-50 text-amber-900"
               }`}
             >
               <span
@@ -314,11 +315,14 @@ export default function Home() {
                     Email
                   </label>
                   <input
+                    // WCAG 3.3.1 + 4.1.3
                     id="login-email"
                     name="email"
                     type="email"
                     aria-label="Adres email"
                     aria-required="true"
+                    aria-invalid={error ? "true" : "false"}
+                    aria-describedby={error ? "login-error-msg" : undefined}
                     autoComplete="email"
                     required
                     value={loginState.email}
@@ -339,11 +343,14 @@ export default function Home() {
                     Hasło
                   </label>
                   <input
+                    // WCAG 3.3.1 + 4.1.3
                     id="login-password"
                     name="password"
                     type="password"
                     aria-label="Hasło"
                     aria-required="true"
+                    aria-invalid={error ? "true" : "false"}
+                    aria-describedby={error ? "login-error-msg" : undefined}
                     autoComplete="current-password"
                     required
                     value={loginState.password}
@@ -365,6 +372,7 @@ export default function Home() {
                 </button>
                 {error ? (
                   <p
+                    id="login-error-msg" // WCAG 4.1.3
                     className="text-sm font-medium text-rose-700"
                     role="alert"
                     aria-live="assertive"
@@ -893,7 +901,7 @@ function AdminView({ token }: { token: string }) {
         </div>
       </div>
 
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 lg:col-span-3">
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 lg:col-span-3">
         <p className="font-semibold">Podpowiedzi</p>
         <div className="mt-1 grid gap-2 md:grid-cols-2 lg:grid-cols-4">
           <p>Health: /api/health</p>
@@ -2293,12 +2301,13 @@ function TeacherView({
                       {history.map((h) => (
                         <div key={h.revisionId ?? h.id} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs">
                               <div className="flex flex-wrap items-center justify-between gap-2">
+                                {/* WCAG 1.4.3 – badge statusu z podbitym kontrastem */}
                                 <span
                                   className={`font-semibold px-2 py-1 rounded ${
                                     h.status === "ACCEPTED"
-                                      ? "bg-emerald-100 text-emerald-800"
+                                      ? "bg-emerald-50 text-emerald-900"
                                       : h.status === "NEEDS_FIX"
-                                      ? "bg-amber-100 text-amber-800"
+                                      ? "bg-amber-50 text-amber-900"
                                       : h.status === "REJECTED"
                                       ? "bg-rose-100 text-rose-800"
                                       : "bg-indigo-100 text-indigo-800"
@@ -2917,11 +2926,11 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
   const statusColor = (status?: string) => {
     switch (status) {
       case "SUBMITTED":
-        return "bg-amber-100 text-amber-800";
+        return "bg-amber-50 text-amber-900"; // WCAG 1.4.3
       case "NEEDS_FIX":
-        return "bg-orange-100 text-orange-800";
+        return "bg-orange-50 text-orange-900"; // WCAG 1.4.3
       case "ACCEPTED":
-        return "bg-emerald-100 text-emerald-800";
+        return "bg-emerald-50 text-emerald-900"; // WCAG 1.4.3
       case "REJECTED":
         return "bg-rose-100 text-rose-800";
       default:
@@ -3524,12 +3533,13 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
                                         <div className="md:pl-4">
                                           <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs shadow-sm">
                                             <div className="flex items-center justify-between gap-2">
+                                              {/* WCAG 1.4.3 – badge statusu z podbitym kontrastem */}
                                               <span
                                                 className={`font-semibold px-2 py-1 rounded ${
                                                   h.status === "ACCEPTED"
-                                                    ? "bg-emerald-100 text-emerald-800"
+                                                    ? "bg-emerald-50 text-emerald-900"
                                                     : h.status === "NEEDS_FIX"
-                                                    ? "bg-amber-100 text-amber-800"
+                                                    ? "bg-amber-50 text-amber-900"
                                                     : h.status === "REJECTED"
                                                     ? "bg-rose-100 text-rose-800"
                                                     : "bg-indigo-100 text-indigo-800"

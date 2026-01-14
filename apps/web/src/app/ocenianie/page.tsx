@@ -66,9 +66,12 @@ const TeacherHeader = ({
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <div className="relative">
           <button
+            id="notifications-button"
             className="relative rounded-md border border-slate-300 px-3 py-2 font-semibold text-slate-700 hover:bg-slate-100"
             title="Powiadomienia"
             aria-label="Powiadomienia"
+            aria-expanded={notificationsOpen} // WCAG 4.1.2
+            aria-haspopup="true" // WCAG 4.1.2
             onClick={onToggleNotifications}
           >
             🔔
@@ -79,7 +82,10 @@ const TeacherHeader = ({
             )}
           </button>
           {notificationsOpen && (
-            <div className="absolute right-0 z-10 mt-2 w-72 rounded-lg border border-slate-200 bg-white shadow-lg">
+            <div
+              ref={dropdownRef}
+              className="absolute right-0 z-10 mt-2 w-72 rounded-lg border border-slate-200 bg-white shadow-lg"
+            >
               <div className="px-3 py-2 text-xs font-semibold text-slate-700 border-b border-slate-100">
                 Powiadomienia
               </div>
@@ -160,6 +166,7 @@ export default function OcenianiePage() {
   const [msg, setMsg] = useState<string | null>(null);
   const [contrastMode, setContrastMode] = useState<"normal" | "high1" | "high2">("normal");
   const feedbackFileInput = useRef<HTMLInputElement | null>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null); // WCAG 2.4.3
   const [feedbackFile, setFeedbackFile] = useState<File | null>(null);
   const [uploadingFeedback, setUploadingFeedback] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -179,6 +186,29 @@ export default function OcenianiePage() {
     if (contrastMode === "high1") document.documentElement.classList.add("contrast-high1");
     if (contrastMode === "high2") document.documentElement.classList.add("contrast-high2");
   }, [contrastMode]);
+
+  useEffect(() => {
+    if (!notificationsOpen) return;
+    // WCAG 2.1.1 + 2.4.3 – Esc zamyka dropdown i fokus wraca
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setNotificationsOpen(false);
+        document.getElementById("notifications-button")?.focus();
+      }
+    };
+    // WCAG 2.4.3 – klik poza dropdownem zamyka panel
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setNotificationsOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handleEscape);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [notificationsOpen]);
 
   useEffect(() => {
     const saved = localStorage.getItem("token");
@@ -380,15 +410,15 @@ export default function OcenianiePage() {
 
   const lateBadge = useMemo(() => {
     if (!selectedEntry?.lastSubmittedAt) {
-      return { label: "Praca nie oddana", className: "bg-amber-100 text-amber-800" };
+      return { label: "Praca nie oddana", className: "bg-amber-50 text-amber-900" }; // WCAG 1.4.3
     }
     if (latePercentInfo != null && latePercentInfo > 0) {
       return {
         label: `Oddano po terminie (${latePercentInfo}% między preferowanym a ostatecznym)`,
-        className: "bg-rose-100 text-rose-800",
+        className: "bg-rose-100 text-rose-800", // kontrast ok
       };
     }
-    return { label: "Oddano w terminie", className: "bg-emerald-100 text-emerald-800" };
+    return { label: "Oddano w terminie", className: "bg-emerald-50 text-emerald-900" }; // WCAG 1.4.3
   }, [latePercentInfo, selectedEntry]);
 
   const handleSelectEntry = (entry: TeacherQueueEntry) => {
@@ -646,7 +676,13 @@ export default function OcenianiePage() {
                         role="button"
                         tabIndex={0}
                         onClick={() => handleSelectEntry(e)}
-                        onKeyDown={(ev) => ev.key === "Enter" && handleSelectEntry(e)}
+                        onKeyDown={(ev) => {
+                          // WCAG 2.1.1 – aktywacja Space i Enter
+                          if (ev.key === "Enter" || ev.key === " ") {
+                            ev.preventDefault();
+                            handleSelectEntry(e);
+                          }
+                        }}
                         className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm shadow-sm"
                       >
                         <div className="flex items-center justify-between">
@@ -754,7 +790,7 @@ export default function OcenianiePage() {
                       Kary są tylko informacyjne – punkty wpisuje nauczyciel.
                     </span>
                     {belowPassWarning && (
-                      <span className="rounded-md bg-amber-100 px-2 py-1 font-semibold text-amber-800">
+                      <span className="rounded-md bg-amber-50 px-2 py-1 font-semibold text-amber-900">
                         Poniżej progu: zaakceptujesz mimo braku zaliczenia
                       </span>
                     )}
@@ -842,12 +878,13 @@ export default function OcenianiePage() {
                     {history.map((h) => (
                       <div key={h.revisionId ?? h.id} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs space-y-1">
                         <div className="flex flex-wrap items-center justify-between gap-2">
+                          {/* WCAG 1.4.3 – wzmocniony kontrast badge statusu */}
                           <span
                             className={`font-semibold px-2 py-1 rounded ${
                               h.status === "ACCEPTED"
-                                ? "bg-emerald-100 text-emerald-800"
+                                ? "bg-emerald-50 text-emerald-900"
                                 : h.status === "NEEDS_FIX"
-                                ? "bg-amber-100 text-amber-800"
+                                ? "bg-amber-50 text-amber-900"
                                 : h.status === "REJECTED"
                                 ? "bg-rose-100 text-rose-800"
                                 : "bg-indigo-100 text-indigo-800"
