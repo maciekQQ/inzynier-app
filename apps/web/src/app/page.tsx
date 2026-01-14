@@ -901,6 +901,7 @@ function AdminView({ token }: { token: string }) {
         </div>
         {msg ? <p className="mt-2 text-xs text-emerald-900">Status: {msg}</p> : null}
       </div>
+      {msg && <Toast message={msg} onClose={() => setMsg(null)} />}
     </div>
   );
 }
@@ -2717,7 +2718,6 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [taskFilter, setTaskFilter] = useState<"ALL" | "DONE" | "FAILED" | "TODO" | "FIX">("ALL");
   const [expandedTasks, setExpandedTasks] = useState<Set<number>>(() => new Set());
-  const [showPasswordBox, setShowPasswordBox] = useState(false);
   const [readStudentNotifications, setReadStudentNotifications] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
     try {
@@ -3102,45 +3102,37 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
       <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-900">Zmiana hasła</h2>
+        </div>
+        <div className="mt-4 space-y-3 text-sm">
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">
+              Stare hasło
+            </label>
+            <input
+              type="password"
+              className="w-full rounded border px-3 py-2"
+              value={changePasswordForm.oldPassword}
+              onChange={(e) => setChangePasswordForm((f) => ({ ...f, oldPassword: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">
+              Nowe hasło
+            </label>
+            <input
+              type="password"
+              className="w-full rounded border px-3 py-2"
+              value={changePasswordForm.newPassword}
+              onChange={(e) => setChangePasswordForm((f) => ({ ...f, newPassword: e.target.value }))}
+            />
+          </div>
           <button
-            onClick={() => setShowPasswordBox((v) => !v)}
-            className="rounded-md bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-200 shadow-sm"
+            onClick={handleChangePassword}
+            className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
           >
-            {showPasswordBox ? "Zwiń" : "Pokaż"}
+            Zmień hasło
           </button>
         </div>
-        {showPasswordBox && (
-          <div className="mt-4 space-y-3 text-sm">
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                Stare hasło
-              </label>
-              <input
-                type="password"
-                className="w-full rounded border px-3 py-2"
-                value={changePasswordForm.oldPassword}
-                onChange={(e) => setChangePasswordForm((f) => ({ ...f, oldPassword: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                Nowe hasło
-              </label>
-              <input
-                type="password"
-                className="w-full rounded border px-3 py-2"
-                value={changePasswordForm.newPassword}
-                onChange={(e) => setChangePasswordForm((f) => ({ ...f, newPassword: e.target.value }))}
-              />
-            </div>
-            <button
-              onClick={handleChangePassword}
-              className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
-            >
-              Zmień hasło
-            </button>
-          </div>
-        )}
       </div>
 
       <div className="lg:col-span-2 space-y-4">
@@ -3306,7 +3298,7 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
                           return next;
                         })
                       }
-                      className="text-xs font-semibold text-indigo-700 hover:underline"
+                      className="rounded-md bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-200 shadow-sm"
                     >
                       {isExpanded ? "Zwiń" : "Rozwiń"}
                     </button>
@@ -3387,43 +3379,62 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
 
                           <div className="space-y-2">
                             <div>
-                              <textarea
-                                value={uploadCommentByArtifact[item.artifactId] || ""}
-                                onChange={(e) =>
-                                  setUploadCommentByArtifact((prev) => ({
-                                    ...prev,
-                                    [item.artifactId]: e.target.value,
-                                  }))
-                                }
-                                placeholder="Opcjonalny opis/komentarz do oddania"
-                                className="mb-2 w-full rounded-md border border-slate-300 px-3 py-2 text-xs"
-                              />
-                              <div className="flex flex-wrap gap-2">
-                                <button
-                                  onClick={() => handlePickFile(item.artifactId, item.taskId)}
-                                  className="rounded-md bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-800 shadow-sm hover:bg-slate-200 disabled:cursor-not-allowed disabled:bg-slate-200"
-                                  disabled={item.lastRevisionStatus === "ACCEPTED"}
-                                >
-                                  Wybierz plik
-                                </button>
-                                <button
-                                  onClick={handleSubmitUpload}
-                                  disabled={
-                                    !selectedFile ||
-                                    !uploadTarget ||
-                                    uploadTarget.artifactId !== item.artifactId ||
-                                    item.lastRevisionStatus === "ACCEPTED"
-                                  }
-                                  className="rounded-md bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:bg-indigo-300"
-                                >
-                                  Oddaj
-                                </button>
-                              </div>
-                              {selectedFile && uploadTarget?.artifactId === item.artifactId ? (
-                                <p className="text-[11px] text-slate-600 mt-1">
-                                  Wybrano: {selectedFile.name} ({Math.round(selectedFile.size / 1024)} KB)
-                                </p>
-                              ) : null}
+                              {/*
+                                Student może oddać plik tylko, gdy nie ma jeszcze oddania
+                                albo gdy nauczyciel poprosił o poprawę (NEEDS_FIX).
+                                Blokujemy ponowne oddania w statusach SUBMITTED/ACCEPTED.
+                              */}
+                              {(() => {
+                                const status = item.lastRevisionStatus;
+                                const canSubmit = !status || status === "NEEDS_FIX";
+                                const disabledSubmit =
+                                  !canSubmit ||
+                                  !selectedFile ||
+                                  !uploadTarget ||
+                                  uploadTarget.artifactId !== item.artifactId;
+                                return (
+                                  <>
+                                    <textarea
+                                      value={uploadCommentByArtifact[item.artifactId] || ""}
+                                      onChange={(e) =>
+                                        setUploadCommentByArtifact((prev) => ({
+                                          ...prev,
+                                          [item.artifactId]: e.target.value,
+                                        }))
+                                      }
+                                      placeholder="Opcjonalny opis/komentarz do oddania"
+                                      className="mb-2 w-full rounded-md border border-slate-300 px-3 py-2 text-xs"
+                                      disabled={!canSubmit}
+                                    />
+                                    <div className="flex flex-wrap gap-2">
+                                      <button
+                                        onClick={() => handlePickFile(item.artifactId, item.taskId)}
+                                        className="rounded-md bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-800 shadow-sm hover:bg-slate-200 disabled:cursor-not-allowed disabled:bg-slate-200"
+                                        disabled={!canSubmit}
+                                      >
+                                        Wybierz plik
+                                      </button>
+                                      <button
+                                        onClick={handleSubmitUpload}
+                                        disabled={disabledSubmit}
+                                        className="rounded-md bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:bg-indigo-300"
+                                      >
+                                        Oddaj
+                                      </button>
+                                    </div>
+                                    {selectedFile && uploadTarget?.artifactId === item.artifactId ? (
+                                      <p className="text-[11px] text-slate-600 mt-1">
+                                        Wybrano: {selectedFile.name} ({Math.round(selectedFile.size / 1024)} KB)
+                                      </p>
+                                    ) : null}
+                                    {!canSubmit && (
+                                      <p className="mt-1 text-[11px] font-semibold text-slate-600">
+                                        Kolejne oddanie będzie możliwe po prośbie o poprawę.
+                                      </p>
+                                    )}
+                                  </>
+                                );
+                              })()}
                             </div>
 
                             <div>
