@@ -68,6 +68,7 @@ const TeacherHeader = ({
           <button
             className="relative rounded-md border border-slate-300 px-3 py-2 font-semibold text-slate-700 hover:bg-slate-100"
             title="Powiadomienia"
+            aria-label="Powiadomienia"
             onClick={onToggleNotifications}
           >
             🔔
@@ -731,12 +732,13 @@ export default function OcenianiePage() {
 
               <div className="grid gap-3 md:grid-cols-3">
                 <div className="md:col-span-1">
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  <label className="block text-xs font-semibold text-slate-600 mb-1" htmlFor="grade-points">
                     {currentTaskMode === "POINTS10"
                       ? `Ocena punktowa (1-${currentTaskMax || 10})`
                       : "Punktacja procentowa (1-100)"}
                   </label>
                   <input
+                    id="grade-points"
                     type="number"
                     min={currentTaskMode === "POINTS10" ? 0 : 0}
                     max={currentTaskMode === "POINTS10" ? currentTaskMax : 100}
@@ -774,10 +776,11 @@ export default function OcenianiePage() {
                   </select>
                 </div>
                 <div className="md:col-span-1">
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  <label className="block text-xs font-semibold text-slate-600 mb-1" htmlFor="grade-comment">
                     Komentarz dla studenta
                   </label>
                   <input
+                    id="grade-comment"
                     type="text"
                     value={gradeForm.comment}
                     onChange={(e) => setGradeForm((f) => ({ ...f, comment: e.target.value }))}

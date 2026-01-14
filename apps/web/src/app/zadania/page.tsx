@@ -35,6 +35,7 @@ const TeacherHeader = ({
           <button
             className="relative rounded-md border border-slate-300 px-3 py-2 font-semibold text-slate-700 hover:bg-slate-100"
             title="Powiadomienia"
+            aria-label="Powiadomienia"
             onClick={onToggleNotifications}
           >
             🔔
@@ -439,8 +440,11 @@ export default function ZadaniaPage() {
             <p className="text-sm text-slate-600 mt-1">Logika bez zmian: twórz pojedyncze zadania lub całe sesje.</p>
           </div>
           <div className="flex items-center gap-2 text-xs rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
-            <label className="font-semibold text-slate-700">Grupa</label>
+            <label className="font-semibold text-slate-700" htmlFor="task-group-select">
+              Grupa
+            </label>
             <select
+              id="task-group-select"
               value={selectedGroup ?? ""}
               onChange={(e) => {
                 const v = e.target.value;
@@ -472,8 +476,11 @@ export default function ZadaniaPage() {
               </div>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Tytuł</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1" htmlFor="task-title">
+                    Tytuł
+                  </label>
                   <input
+                    id="task-title"
                     value={newTask.title}
                     onChange={(e) => setNewTask((t) => ({ ...t, title: e.target.value }))}
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
@@ -481,8 +488,11 @@ export default function ZadaniaPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Opis</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1" htmlFor="task-description">
+                    Opis
+                  </label>
                   <input
+                    id="task-description"
                     value={newTask.description}
                     onChange={(e) => setNewTask((t) => ({ ...t, description: e.target.value }))}
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
@@ -490,8 +500,11 @@ export default function ZadaniaPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Termin preferowany</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1" htmlFor="task-soft">
+                    Termin preferowany
+                  </label>
                   <input
+                    id="task-soft"
                     type="datetime-local"
                     value={newTask.soft}
                     onChange={(e) => setNewTask((t) => ({ ...t, soft: e.target.value }))}
@@ -499,8 +512,11 @@ export default function ZadaniaPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Termin ostateczny</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1" htmlFor="task-hard">
+                    Termin ostateczny
+                  </label>
                   <input
+                    id="task-hard"
                     type="datetime-local"
                     value={newTask.hard}
                     onChange={(e) => setNewTask((t) => ({ ...t, hard: e.target.value }))}
@@ -508,8 +524,11 @@ export default function ZadaniaPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Tryb oceny</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1" htmlFor="task-grading-mode">
+                    Tryb oceny
+                  </label>
                   <select
+                    id="task-grading-mode"
                     value={newTask.gradingMode}
                     onChange={(e) => setNewTask((t) => ({ ...t, gradingMode: e.target.value }))}
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
@@ -520,8 +539,11 @@ export default function ZadaniaPage() {
                 </div>
                 {newTask.gradingMode === "POINTS10" ? (
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Maks. punktów (x)</label>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1" htmlFor="task-max-points">
+                      Maks. punktów (x)
+                    </label>
                     <input
+                      id="task-max-points"
                       type="number"
                       min={1}
                       max={9999}
@@ -532,10 +554,11 @@ export default function ZadaniaPage() {
                   </div>
                 ) : null}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  <label className="block text-xs font-semibold text-slate-600 mb-1" htmlFor="task-pass">
                     Próg zaliczenia ({newTask.gradingMode === "POINTS10" ? "pkt" : "%"})
                   </label>
                   <input
+                    id="task-pass"
                     type="number"
                     min={0}
                     max={newTask.gradingMode === "POINTS10" ? newTask.maxPoints || 10 : 100}
@@ -565,8 +588,11 @@ export default function ZadaniaPage() {
               </div>
               <div className="mt-3 grid gap-3 md:grid-cols-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Nazwa przedmiotu</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1" htmlFor="session-name">
+                    Nazwa przedmiotu
+                  </label>
                   <input
+                    id="session-name"
                     value={newSession.name}
                     onChange={(e) => setNewSession((s) => ({ ...s, name: e.target.value }))}
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
@@ -574,8 +600,11 @@ export default function ZadaniaPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Typ</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1" htmlFor="session-type">
+                    Typ
+                  </label>
                   <select
+                    id="session-type"
                     value={newSession.type}
                     onChange={(e) => setNewSession((s) => ({ ...s, type: e.target.value }))}
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
@@ -585,8 +614,11 @@ export default function ZadaniaPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Liczba zadań</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1" htmlFor="session-count">
+                    Liczba zadań
+                  </label>
                   <input
+                    id="session-count"
                     type="number"
                     min={1}
                     max={50}
@@ -621,8 +653,11 @@ export default function ZadaniaPage() {
               </div>
               <div className="mt-3 grid gap-3 md:grid-cols-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Tryb oceny domyślny</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1" htmlFor="session-grading-mode">
+                    Tryb oceny domyślny
+                  </label>
                   <select
+                    id="session-grading-mode"
                     value={newSession.gradingMode}
                     onChange={(e) => setNewSession((s) => ({ ...s, gradingMode: e.target.value }))}
                     className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
@@ -633,10 +668,11 @@ export default function ZadaniaPage() {
                 </div>
               </div>
               <div className="mt-3">
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                <label className="block text-xs font-semibold text-slate-600 mb-1" htmlFor="session-pass">
                   Próg zaliczenia przedmiotu ({newSession.gradingMode === "POINTS10" ? "pkt" : "%"})
                 </label>
                 <input
+                  id="session-pass"
                   type="number"
                   min={0}
                   max={newSession.gradingMode === "POINTS10" ? newSession.maxPoints || 10 : 100}
@@ -677,6 +713,7 @@ export default function ZadaniaPage() {
                     onClick={() => setSessionTasksPage((p) => Math.max(0, p - 1))}
                     disabled={currentPage === 0}
                     className="rounded-md border border-slate-300 px-2 py-1 disabled:opacity-50"
+                    aria-label="Poprzednia strona zadań"
                   >
                     ←
                   </button>
@@ -684,6 +721,7 @@ export default function ZadaniaPage() {
                     onClick={() => setSessionTasksPage((p) => Math.min(totalPages - 1, p + 1))}
                     disabled={currentPage >= totalPages - 1}
                     className="rounded-md border border-slate-300 px-2 py-1 disabled:opacity-50"
+                    aria-label="Następna strona zadań"
                   >
                     →
                   </button>

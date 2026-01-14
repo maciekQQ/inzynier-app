@@ -221,6 +221,7 @@ export default function StatystykiPage() {
           <p className="text-xs uppercase tracking-[0.18em] text-slate-500 font-semibold mb-3">Lista zadań / przedmiotów</p>
           <div className="overflow-auto">
             <table className="min-w-full text-sm">
+              <caption className="sr-only">Statystyki zadań</caption>
               <thead>
                 <tr className="text-left text-slate-600">
                   <th className="pb-2 pr-4">Nazwa zadania</th>

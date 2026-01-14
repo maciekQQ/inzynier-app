@@ -196,6 +196,10 @@ export default function Home() {
 
   return (
     <>
+      <a href="#main-content" className="skip-link">
+        Przejdź do głównej treści
+      </a>
+      <main id="main-content">
       <div className="min-h-screen bg-slate-50 text-slate-900">
         <div className="border-b border-slate-200 bg-white/80 backdrop-blur">
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -304,16 +308,17 @@ export default function Home() {
               >
                 <div>
                   <label
-                    htmlFor="email"
+                    htmlFor="login-email"
                     className="block text-sm font-medium text-slate-800"
                   >
                     Email
                   </label>
                   <input
-                    id="email"
+                    id="login-email"
                     name="email"
                     type="email"
-                    aria-label="Email"
+                    aria-label="Adres email"
+                    aria-required="true"
                     autoComplete="email"
                     required
                     value={loginState.email}
@@ -328,16 +333,17 @@ export default function Home() {
                 </div>
                 <div>
                   <label
-                    htmlFor="password"
+                    htmlFor="login-password"
                     className="block text-sm font-medium text-slate-800"
                   >
                     Hasło
                   </label>
                   <input
-                    id="password"
+                    id="login-password"
                     name="password"
                     type="password"
                     aria-label="Hasło"
+                    aria-required="true"
                     autoComplete="current-password"
                     required
                     value={loginState.password}
@@ -386,6 +392,7 @@ export default function Home() {
           </div>
         </div>
       </div>
+      </main>
     <style jsx global>{`
       .contrast-high1 body {
         filter: invert(1) hue-rotate(180deg);
