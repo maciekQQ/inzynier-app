@@ -367,6 +367,7 @@ export default function Home() {
                   </p>
                 ) : null}
               </form>
+              <p className="mt-4 text-center text-sm text-slate-600">Zaloguj się, aby zobaczyć dane.</p>
             </div>
           ) : (
             <div className="mb-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -381,13 +382,7 @@ export default function Home() {
           )}
 
           <div className="w-full">
-            {content ? (
-              content
-            ) : (
-              <p className="mt-4 text-sm text-slate-600">
-                Zaloguj się, aby zobaczyć dane.
-              </p>
-            )}
+            {content ? content : null}
           </div>
         </div>
       </div>

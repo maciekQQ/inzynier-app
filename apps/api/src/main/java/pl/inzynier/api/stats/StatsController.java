@@ -57,10 +57,10 @@ public class StatsController {
             Long artifactId = entry.getId() != null ? entry.getId().getArtifactId() : null;
             if (artifactId == null) continue;
             Artifact artifact = artifactCache.computeIfAbsent(artifactId, id -> artifactRepository.findById(id).orElse(null));
-            if (artifact == null) continue;
+            if (artifact == null || artifact.getStage() == null || artifact.getStage().getTask() == null) continue;
             Task task = taskCache.computeIfAbsent(artifact.getStage().getTask().getId(),
                     id -> taskRepository.findById(id).orElse(null));
-            if (task == null) continue;
+            if (task == null || task.getCourse() == null) continue;
 
             int[] arr = counters.computeIfAbsent(task.getId(), id -> new int[]{0, 0, 0});
             RevisionStatus status = entry.getLastRevisionStatus();
@@ -75,7 +75,7 @@ public class StatsController {
         List<StatsDto> result = new ArrayList<>();
         counters.forEach((taskId, arr) -> {
             Task task = taskCache.get(taskId);
-            if (task != null) {
+            if (task != null && task.getCourse() != null) {
                 ClassGroup course = courseCache.get(task.getCourse().getId());
                 result.add(new StatsDto(
                         taskId,

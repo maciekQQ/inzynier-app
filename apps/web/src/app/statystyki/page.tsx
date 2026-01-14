@@ -153,9 +153,9 @@ export default function StatystykiPage() {
         <div className="grid gap-3 md:grid-cols-2">
           <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-xs uppercase tracking-[0.18em] text-slate-500 font-semibold mb-2">Łączne</p>
-            <div className="grid grid-cols-[120px,1fr] items-center gap-4">
-              <div className="mx-auto h-28 w-28 rounded-full border border-slate-200 shadow-inner" style={donutStyle}>
-                <div className="m-4 flex h-20 w-20 items-center justify-center rounded-full bg-white text-center text-sm font-semibold text-slate-800 shadow">
+            <div className="grid grid-cols-[150px,1fr] items-center gap-4">
+              <div className="mx-auto h-36 w-36 rounded-full border border-slate-200 shadow-inner" style={donutStyle}>
+                <div className="m-5 flex h-26 w-26 items-center justify-center rounded-full bg-white text-center text-sm font-semibold text-slate-800 shadow">
                   {totals.total} razem
                 </div>
               </div>
