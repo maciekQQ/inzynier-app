@@ -223,7 +223,8 @@ export default function StatystykiPage() {
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="text-left text-slate-600">
-                  <th className="pb-2 pr-4">Nazwa</th>
+                  <th className="pb-2 pr-4">Nazwa zadania</th>
+                  <th className="pb-2 pr-4">Przedmiot</th>
                   <th className="pb-2 pr-4">Zaliczono</th>
                   <th className="pb-2 pr-4">Niezaliczone</th>
                   <th className="pb-2 pr-4">Brak oddania</th>
@@ -233,7 +234,7 @@ export default function StatystykiPage() {
                 {stats.map((s) => (
                   <tr key={`${s.taskId}-${s.taskTitle}`} className="text-slate-800">
                     <td className="py-2 pr-4 font-semibold">{s.taskTitle}</td>
-                    <td className="py-2 pr-4">{s.courseName}</td>
+                    <td className="py-2 pr-4 text-slate-700">{s.courseName}</td>
                     <td className="py-2 pr-4 text-emerald-700">{s.passed}</td>
                     <td className="py-2 pr-4 text-orange-700">{s.failed}</td>
                     <td className="py-2 pr-4 text-slate-600">{s.pending}</td>
