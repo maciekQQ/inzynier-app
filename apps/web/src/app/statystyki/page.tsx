@@ -81,6 +81,7 @@ const TeacherHeader = ({
 export default function StatystykiPage() {
   const [contrastMode, setContrastMode] = useState<ContrastMode>("normal");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
   const [stats, setStats] = useState<
     { taskId: number; taskTitle: string; courseName: string; passed: number; failed: number; pending: number }[]
   >([]);
@@ -91,11 +92,19 @@ export default function StatystykiPage() {
   }, [contrastMode]);
 
   useEffect(() => {
-    fetch(`${API_URL}/api/stats/overview`, { credentials: "include" })
-      .then((r) => r.json())
+    const saved = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (saved) setToken(saved);
+  }, []);
+
+  useEffect(() => {
+    if (!token) return;
+    fetch(`${API_URL}/api/stats/overview`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then((data) => setStats(Array.isArray(data) ? data : []))
       .catch(() => setStats([]));
-  }, []);
+  }, [token]);
 
   const totals = useMemo(() => {
     const all = stats.reduce(
