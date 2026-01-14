@@ -56,9 +56,15 @@ public class StatsController {
         for (GradingQueueEntry entry : entries) {
             Long artifactId = entry.getId() != null ? entry.getId().getArtifactId() : null;
             if (artifactId == null) continue;
+
             Artifact artifact = artifactCache.computeIfAbsent(artifactId, id -> artifactRepository.findById(id).orElse(null));
-            if (artifact == null || artifact.getStage() == null || artifact.getStage().getTask() == null) continue;
-            Task task = taskCache.computeIfAbsent(artifact.getStage().getTask().getId(),
+            if (artifact == null || artifact.getStage() == null) continue;
+
+            // dociągamy Stage aby uniknąć lazy proxy bez sesji
+            var stageEntity = stageRepository.findById(artifact.getStage().getId()).orElse(null);
+            if (stageEntity == null || stageEntity.getTask() == null) continue;
+
+            Task task = taskCache.computeIfAbsent(stageEntity.getTask().getId(),
                     id -> taskRepository.findById(id).orElse(null));
             if (task == null || task.getCourse() == null) continue;
 
@@ -68,7 +74,7 @@ public class StatsController {
             else if (RevisionStatus.REJECTED.equals(status)) arr[1]++; // failed
             else arr[2]++; // pending/needs_fix/none
 
-            // ensure course cached
+            // ensure course cached (materialize course to avoid lazy proxy)
             courseCache.computeIfAbsent(task.getCourse().getId(), id -> courseRepository.findById(id).orElse(null));
         }
 
