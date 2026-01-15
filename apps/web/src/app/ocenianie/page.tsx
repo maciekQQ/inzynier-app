@@ -379,6 +379,13 @@ export default function OcenianiePage() {
     selectedEntry && currentTaskMode === "POINTS10"
       ? tasks.find((t) => t.id === selectedEntry.taskId)?.maxPoints || 10
       : 100;
+  const penaltyPercent = selectedEntry?.penaltyPercentApplied ?? 0;
+  const suggestedPoints = useMemo(() => {
+    const raw = parseFloat(gradeForm.points);
+    if (Number.isNaN(raw)) return selectedEntry?.lastPointsNetto ?? null;
+    const factor = Math.max(0, 1 - (penaltyPercent || 0) / 100);
+    return Number((raw * factor).toFixed(2));
+  }, [gradeForm.points, penaltyPercent, selectedEntry?.lastPointsNetto]);
   const currentPassThreshold =
     selectedEntry && tasks.find((t) => t.id === selectedEntry.taskId)?.passThreshold != null
       ? tasks.find((t) => t.id === selectedEntry.taskId)?.passThreshold
@@ -759,7 +766,11 @@ export default function OcenianiePage() {
                     Sugerowane punkty (uwzględniając ewentualne spóźnienie)
                   </p>
                   <p className="font-semibold text-slate-900">
-                    {selectedEntry.lastPointsNetto != null ? selectedEntry.lastPointsNetto : "—"}
+                    {suggestedPoints != null
+                      ? formatPoints(suggestedPoints, currentTaskMode, currentTaskMax)
+                      : selectedEntry.lastPointsNetto != null
+                        ? formatPoints(selectedEntry.lastPointsNetto, currentTaskMode, currentTaskMax)
+                        : "—"}
                   </p>
                 </div>
                 <div className="rounded-md border border-slate-200 bg-white px-3 py-2">

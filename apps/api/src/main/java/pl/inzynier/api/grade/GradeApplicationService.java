@@ -63,31 +63,15 @@ public class GradeApplicationService {
         if (skipPenalty) {
             return capByMode(brutto, task.getGradingMode(), task.getMaxPoints());
         }
-        // Spróbuj użyć read-modelu kolejki (najświeższa kara)
+        // Używamy kary zapisanej w read-modelu kolejki (spójne z frontem)
         GradingQueueEntry entry = gradingQueueRepository.findById(
                 new GradingQueueId(revision.getArtifact().getId(), revision.getStudentId())
         ).orElse(null);
-        double base = brutto;
-        var gradingMode = task.getGradingMode();
-        // apply penalty percent
-        if (entry != null && entry.getPenaltyPercentApplied() != null) {
-            base = latePenaltyCalculator.applyPenalty(brutto, entry.getPenaltyPercentApplied());
-            return capByMode(base, gradingMode, task.getMaxPoints());
-        }
-        // Fallback: policz z terminów etapu
-        var stage = revision.getArtifact().getStage();
-        double k = stage.getPenaltyKPercentPer24h() == null ? 0.0 : stage.getPenaltyKPercentPer24h();
-        double m = stage.getPenaltyMaxMPercent() == null ? 100.0 : stage.getPenaltyMaxMPercent();
-        double penalty = latePenaltyCalculator.computePenaltyPercent(
-                stage.getSoftDeadline(),
-                stage.getHardDeadline(),
-                revision.getCreatedAt(),
-                false,
-                k,
-                m
-        );
-        base = latePenaltyCalculator.applyPenalty(brutto, penalty);
-        return capByMode(base, gradingMode, task.getMaxPoints());
+        double penalty = entry != null && entry.getPenaltyPercentApplied() != null
+                ? entry.getPenaltyPercentApplied()
+                : 0.0;
+        double netto = latePenaltyCalculator.applyPenalty(brutto, penalty);
+        return capByMode(netto, task.getGradingMode(), task.getMaxPoints());
     }
 
     private double capByMode(double value, pl.inzynier.api.course.GradingMode gradingMode, Double maxPoints) {
