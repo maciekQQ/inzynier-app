@@ -4,10 +4,12 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import pl.inzynier.api.audit.AuditEventType;
 import pl.inzynier.api.audit.AuditService;
 import pl.inzynier.api.course.*;
 import pl.inzynier.api.grading.AggregationService;
@@ -60,12 +62,14 @@ public class ExportController {
      * Eksport szczegółowy (per artefakt) - wszystkie statusy.
      */
     @GetMapping("/course/{courseId}/csv-detailed")
-    public ResponseEntity<byte[]> exportCourseDetailed(@PathVariable Long courseId) {
+    public ResponseEntity<byte[]> exportCourseDetailed(@PathVariable Long courseId,
+                                                       @AuthenticationPrincipal User currentUser) {
         List<Task> tasks = taskRepository.findByCourseId(courseId);
         StringBuilder sb = new StringBuilder();
         sb.append("taskId,taskTitle,stageId,stageName,stageWeight,artifactId,artifactName,");
         sb.append("studentId,albumNumber,studentName,status,pointsBrutto,pointsNetto,penalty%,lastSubmittedAt,");
         sb.append("softDeadline,hardDeadline\n");
+        int entriesCount = 0;
         
         for (Task task : tasks) {
             List<Stage> stages = stageRepository.findByTaskId(task.getId());
@@ -77,12 +81,18 @@ public class ExportController {
                             .toList();
                     for (GradingQueueEntry e : entries) {
                         sb.append(detailedRow(task, stage, artifact, e));
+                        entriesCount++;
                     }
                 }
             }
         }
 
-        auditService.log("CSV_EXPORT_DETAILED", null, "{\"courseId\":" + courseId + "}");
+        // Audyt eksportu CSV (szczegółowy)
+        auditService.log(
+                AuditEventType.GRADES_EXPORTED,
+                currentUser != null ? currentUser.getId() : null,
+                String.format("{\"courseId\":%d,\"studentCount\":%d,\"format\":\"CSV_DETAILED\"}", courseId, entriesCount)
+        );
         
         byte[] bytes = sb.toString().getBytes(StandardCharsets.UTF_8);
         return ResponseEntity.ok()
@@ -96,7 +106,8 @@ public class ExportController {
      * Format: studentId,albumNumber,lastName,firstName,finalScore
      */
     @GetMapping("/course/{courseId}/csv-aggregated")
-    public ResponseEntity<byte[]> exportCourseAggregated(@PathVariable Long courseId) {
+    public ResponseEntity<byte[]> exportCourseAggregated(@PathVariable Long courseId,
+                                                         @AuthenticationPrincipal User currentUser) {
         ClassGroup course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new IllegalArgumentException("Course not found"));
         
@@ -105,6 +116,7 @@ public class ExportController {
         
         StringBuilder sb = new StringBuilder();
         sb.append("studentId,albumNumber,lastName,firstName,finalScore\n");
+        int acceptedStudents = 0;
 
         for (ClassGroupStudent enrollment : enrollments) {
             Long studentId = enrollment.getStudentId();
@@ -120,6 +132,7 @@ public class ExportController {
             if (!hasAccepted) {
                 continue; // Pomijamy studentów bez zaakceptowanych prac
             }
+            acceptedStudents++;
 
             // Agregacja dla wszystkich zadań
             double totalScore = 0.0;
@@ -137,7 +150,12 @@ public class ExportController {
             )).append("\n");
         }
 
-        auditService.log("CSV_EXPORT_AGGREGATED", null, "{\"courseId\":" + courseId + "}");
+        // Audyt eksportu CSV (zagregowany)
+        auditService.log(
+                AuditEventType.GRADES_EXPORTED,
+                currentUser != null ? currentUser.getId() : null,
+                String.format("{\"courseId\":%d,\"studentCount\":%d,\"format\":\"CSV_AGGREGATED\"}", courseId, acceptedStudents)
+        );
 
         byte[] bytes = sb.toString().getBytes(StandardCharsets.UTF_8);
         return ResponseEntity.ok()

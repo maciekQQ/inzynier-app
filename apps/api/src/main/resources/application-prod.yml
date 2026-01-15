@@ -1,0 +1,10 @@
+spring:
+  flyway:
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+# Flyway kontroluje schemat w prod, Hibernate tylko waliduje
+# Dev: ddl-auto=update dla szybkich iteracji
+

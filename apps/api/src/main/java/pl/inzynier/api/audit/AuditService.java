@@ -21,6 +21,14 @@ public class AuditService {
     public void log(String eventType, String message) {
         repository.save(new AuditLog(eventType, null, message));
     }
+
+    /**
+     * Wygodny overload akceptujący enum typów zdarzeń.
+     */
+    @Transactional
+    public void log(AuditEventType type, Long actorId, String contextJson) {
+        log(type.name(), actorId, contextJson);
+    }
 }
 
 

@@ -8,6 +8,7 @@ import pl.inzynier.api.queue.GradingQueueId;
 import pl.inzynier.api.queue.GradingQueueRepository;
 import pl.inzynier.api.revision.Revision;
 import pl.inzynier.api.revision.RevisionStatus;
+import pl.inzynier.api.revision.RevisionRepository;
 import pl.inzynier.api.user.User;
 import pl.inzynier.api.user.UserRepository;
 
@@ -24,6 +25,7 @@ public class GradingQueueService {
     private final CourseStudentRepository courseStudentRepository;
     private final StageRepository stageRepository;
     private final ArtifactRepository artifactRepository;
+    private final RevisionRepository revisionRepository;
 
     public GradingQueueService(GradingQueueRepository gradingQueueRepository,
                                LatePenaltyCalculator latePenaltyCalculator,
@@ -31,7 +33,8 @@ public class GradingQueueService {
                                UserRepository userRepository,
                                CourseStudentRepository courseStudentRepository,
                                StageRepository stageRepository,
-                               ArtifactRepository artifactRepository) {
+                               ArtifactRepository artifactRepository,
+                               RevisionRepository revisionRepository) {
         this.gradingQueueRepository = gradingQueueRepository;
         this.latePenaltyCalculator = latePenaltyCalculator;
         this.stageExemptionRepository = stageExemptionRepository;
@@ -39,6 +42,7 @@ public class GradingQueueService {
         this.courseStudentRepository = courseStudentRepository;
         this.stageRepository = stageRepository;
         this.artifactRepository = artifactRepository;
+        this.revisionRepository = revisionRepository;
     }
 
     @Transactional
@@ -90,6 +94,7 @@ public class GradingQueueService {
                 .filter(e -> revisionId.equals(e.getLastRevisionId()))
                 .findFirst()
                 .ifPresent(entry -> {
+                    Revision currentRevision = revisionRepository.findById(revisionId).orElse(null);
                     entry.setLastPointsBrutto(points);
                     Double penalty = entry.getPenaltyPercentApplied() == null ? 0.0 : entry.getPenaltyPercentApplied();
                     double netto = latePenaltyCalculator.applyPenalty(points, penalty);
@@ -97,8 +102,18 @@ public class GradingQueueService {
                     entry.setLastRevisionStatus(statusAfterGrade);
                     entry.setFlagNewSubmission(false);
                     if (statusAfterGrade == RevisionStatus.ACCEPTED) {
-                        entry.setLastAcceptedRevisionId(revisionId);
-                        entry.setLastAcceptedPointsNetto(netto);
+                        boolean newerThanPrevious = true;
+                        if (entry.getLastAcceptedRevisionId() != null) {
+                            Revision previousAccepted = revisionRepository.findById(entry.getLastAcceptedRevisionId()).orElse(null);
+                            if (previousAccepted != null && currentRevision != null && previousAccepted.getCreatedAt() != null) {
+                                newerThanPrevious = currentRevision.getCreatedAt().isAfter(previousAccepted.getCreatedAt());
+                            }
+                        }
+                        // System liczy ostatnią chronologicznie ACCEPTED rewizję, nie najlepszą punktowo
+                        if (newerThanPrevious) {
+                            entry.setLastAcceptedRevisionId(revisionId);
+                            entry.setLastAcceptedPointsNetto(netto);
+                        }
                     }
                     gradingQueueRepository.save(entry);
                 });

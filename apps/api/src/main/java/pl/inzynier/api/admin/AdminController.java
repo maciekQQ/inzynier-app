@@ -3,13 +3,19 @@ package pl.inzynier.api.admin;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import com.opencsv.CSVReader;
+import java.io.InputStreamReader;
+import java.io.IOException;
 import pl.inzynier.api.admin.dto.AssignTeacherRequest;
 import pl.inzynier.api.admin.dto.CreateCourseRequest;
 import pl.inzynier.api.admin.dto.CreateUserRequest;
 import pl.inzynier.api.admin.dto.ImportStudentRow;
 import pl.inzynier.api.audit.AuditService;
+import pl.inzynier.api.audit.AuditEventType;
 import pl.inzynier.api.course.*;
 import pl.inzynier.api.user.User;
 import pl.inzynier.api.user.UserRepository;
@@ -100,6 +106,112 @@ public class AdminController {
         auditService.log("COURSE_IMPORT_STUDENTS", null, "{\"courseId\":" + courseId + ",\"count\":" + rows.size() + "}");
         return ResponseEntity.ok(results);
     }
+
+    /**
+     * Import studentów z pliku CSV z pełną walidacją.
+     */
+    @PostMapping("/courses/{courseId}/students/import-csv")
+    public ResponseEntity<?> importStudentsCsv(@PathVariable Long courseId,
+                                               @RequestParam("file") MultipartFile file,
+                                               @AuthenticationPrincipal User admin) throws IOException {
+        ClassGroup course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new IllegalArgumentException("Course not found"));
+
+        List<Map<String, Object>> errors = new ArrayList<>();
+        List<ParsedCsvRow> validRows = new ArrayList<>();
+        Set<String> seenAlbums = new HashSet<>();
+        Set<String> existingAlbums = courseStudentRepository.findByCourseId(courseId).stream()
+                .map(CourseStudent::getAlbumNumber)
+                .filter(Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+
+        try (CSVReader reader = new CSVReader(new InputStreamReader(file.getInputStream()))) {
+            String[] row;
+            int rowNum = 0;
+            boolean headerChecked = false;
+            while ((row = reader.readNext()) != null) {
+                rowNum++;
+                // Pomiń pusty wiersz
+                if (row.length == 0 || (row.length == 1 && row[0].isBlank())) {
+                    continue;
+                }
+
+                if (!headerChecked) {
+                    headerChecked = true;
+                    String header = String.join(",", row).toLowerCase();
+                    if (header.contains("nr_albumu") && header.contains("imie") && header.contains("nazwisko")) {
+                        continue; // to nagłówek
+                    }
+                }
+
+                if (row.length < 4) {
+                    errors.add(Map.of("row", rowNum, "error", "Nieprawidłowa liczba kolumn (wymagane 4)"));
+                    continue;
+                }
+
+                String album = row[0].trim();
+                String first = row[1].trim();
+                String last = row[2].trim();
+                String groupName = row[3].trim();
+
+                if (album.isEmpty()) {
+                    errors.add(Map.of("row", rowNum, "error", "Brak numeru albumu"));
+                    continue;
+                }
+                if (first.isEmpty()) {
+                    errors.add(Map.of("row", rowNum, "error", "Brak imienia"));
+                    continue;
+                }
+                if (last.isEmpty()) {
+                    errors.add(Map.of("row", rowNum, "error", "Brak nazwiska"));
+                    continue;
+                }
+                if (!seenAlbums.add(album)) {
+                    errors.add(Map.of("row", rowNum, "error", "Duplikat numeru albumu w pliku: " + album));
+                    continue;
+                }
+                if (existingAlbums.contains(album)) {
+                    errors.add(Map.of("row", rowNum, "error", "Duplikat numeru albumu w bazie: " + album));
+                    continue;
+                }
+
+                validRows.add(new ParsedCsvRow(album, first, last, groupName));
+            }
+        }
+
+        if (!errors.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "errors", errors
+            ));
+        }
+
+        for (ParsedCsvRow row : validRows) {
+            String email = row.albumNumber() + "@students.local";
+            User student = userRepository.findByEmail(email)
+                    .orElseGet(() -> userRepository.save(new User(
+                            email,
+                            passwordEncoder.encode("student123"),
+                            UserRole.STUDENT,
+                            row.firstName(),
+                            row.lastName()
+                    )));
+            courseStudentRepository.save(new CourseStudent(course, student.getId(), row.groupName(), row.albumNumber()));
+        }
+
+        auditService.log(
+                AuditEventType.STUDENTS_IMPORTED,
+                admin != null ? admin.getId() : null,
+                String.format("{\"courseId\":%d,\"count\":%d,\"errors\":0}", courseId, validRows.size())
+        );
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "count", validRows.size()
+        ));
+    }
+
+    private record ParsedCsvRow(String albumNumber, String firstName, String lastName, String groupName) {}
 
     @GetMapping("/courses")
     public List<ClassGroup> listCourses() {

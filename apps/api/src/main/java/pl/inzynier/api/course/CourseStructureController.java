@@ -4,14 +4,17 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import pl.inzynier.api.audit.AuditService;
+import pl.inzynier.api.audit.AuditEventType;
 import pl.inzynier.api.course.dto.*;
 import pl.inzynier.api.storage.StorageService;
 import pl.inzynier.api.revision.RevisionRepository;
 import pl.inzynier.api.revision.RevisionFeedbackMaterialRepository;
 import pl.inzynier.api.grade.GradeRepository;
+import pl.inzynier.api.user.User;
 
 import java.time.Duration;
 import java.util.List;
@@ -193,7 +196,8 @@ public class CourseStructureController {
 
     @PutMapping("/stages/{stageId}")
     public ResponseEntity<?> updateStage(@PathVariable Long stageId,
-                                                @Valid @RequestBody CreateStageRequest request) {
+                                                @Valid @RequestBody CreateStageRequest request,
+                                                @AuthenticationPrincipal User user) {
         Stage stage = stageRepository.findById(stageId)
                 .orElseThrow(() -> new IllegalArgumentException("Stage not found"));
 
@@ -215,6 +219,11 @@ public class CourseStructureController {
             throw new IllegalStateException("Zmiana przekroczy 100% wag");
         }
 
+        // Zapamiętaj stare wartości do audytu
+        int oldWeight = stage.getWeightPercent();
+        var oldSoft = stage.getSoftDeadline();
+        var oldHard = stage.getHardDeadline();
+
         stage.update(
                 request.name(),
                 request.weightPercent(),
@@ -224,6 +233,40 @@ public class CourseStructureController {
                 request.penaltyMaxMPercent()
         );
         Stage saved = stageRepository.save(stage);
+
+        // Audyt zmian wag etapów
+        if (oldWeight != saved.getWeightPercent()) {
+            auditService.log(
+                    AuditEventType.STAGE_WEIGHTS_CHANGED,
+                    user != null ? user.getId() : null,
+                    String.format(
+                            "{\"taskId\":%d,\"stageId\":%d,\"oldWeight\":%d,\"newWeight\":%d,\"changedBy\":%s}",
+                            saved.getTask().getId(),
+                            saved.getId(),
+                            oldWeight,
+                            saved.getWeightPercent(),
+                            user != null ? user.getId() : "null"
+                    )
+            );
+        }
+
+        // Audyt zmian terminów
+        boolean deadlinesChanged = (oldSoft == null ? request.softDeadline() != null : !oldSoft.equals(request.softDeadline()))
+                || (oldHard == null ? request.hardDeadline() != null : !oldHard.equals(request.hardDeadline()));
+        if (deadlinesChanged) {
+            auditService.log(
+                    AuditEventType.STAGE_DEADLINES_CHANGED,
+                    user != null ? user.getId() : null,
+                    String.format(
+                            "{\"stageId\":%d,\"oldSoftDeadline\":\"%s\",\"newSoftDeadline\":\"%s\",\"oldHardDeadline\":\"%s\",\"newHardDeadline\":\"%s\"}",
+                            saved.getId(),
+                            oldSoft,
+                            request.softDeadline(),
+                            oldHard,
+                            request.hardDeadline()
+                    )
+            );
+        }
 
         auditService.log("STAGE_UPDATED", null,
                 String.format("{\"stageId\":%d,\"weight\":%d}", saved.getId(), saved.getWeightPercent()));
