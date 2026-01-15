@@ -273,7 +273,6 @@ export default function OcenianiePage() {
         Promise.all(
           list.map(async (q) => {
             const key = `${q.artifactId}:${q.studentId}`;
-            if (counts[key]) return;
             try {
               const hist = await fetch(
                 `${API_URL}/api/revisions/artifact/${q.artifactId}/student/${q.studentId}`,
@@ -748,17 +747,11 @@ export default function OcenianiePage() {
                 </p>
               </div>
 
-              <div className="grid gap-3 text-sm md:grid-cols-3">
+              <div className="grid gap-3 text-sm md:grid-cols-2">
                 <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
                   <p className="text-xs text-slate-500">Punkty wpisane (ostatnie)</p>
                   <p className="font-semibold text-slate-900">
                     {selectedEntry.lastPointsBrutto != null ? selectedEntry.lastPointsBrutto : "—"}
-                  </p>
-                </div>
-                <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
-                  <p className="text-xs text-slate-500">Punkty informacyjne (po karze)</p>
-                  <p className="font-semibold text-slate-900">
-                    {selectedEntry.lastPointsNetto != null ? selectedEntry.lastPointsNetto : "—"}
                   </p>
                 </div>
                 <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
@@ -921,7 +914,7 @@ export default function OcenianiePage() {
                                 {g.pointsNetto != null ? (
                                   <span className="text-slate-700">
                                     {" "}
-                                    → {formatPoints(g.pointsNetto, currentTaskMode, currentTaskMax)} (po karze, info)
+                                    → {formatPoints(g.pointsNetto, currentTaskMode, currentTaskMax)}
                                   </span>
                                 ) : null}
                                 <span className="text-slate-500"> · {statusLabel[g.statusAfterGrade] || g.statusAfterGrade}</span>
