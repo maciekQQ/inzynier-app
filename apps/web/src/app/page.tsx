@@ -3193,8 +3193,8 @@ function StudentView({ token, profile }: { token: string; profile: Profile }) {
               <option value="ALL">Wszystkie statusy</option>
               <option value="DONE">Zakończone (zaliczone)</option>
               <option value="FAILED">Zakończone (niezaliczone)</option>
-              <option value="TODO">Do oddania (brak zwrotki)</option>
-              <option value="FIX">Do poprawy (zwrotka nauczyciela)</option>
+              <option value="TODO">Do oddania (nowe)</option>
+              <option value="FIX">Do poprawy (zwrócone przez nauczyciela)</option>
             </select>
           </div>
 

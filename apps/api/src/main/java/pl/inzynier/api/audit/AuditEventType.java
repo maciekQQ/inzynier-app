@@ -4,7 +4,6 @@ package pl.inzynier.api.audit;
  * Typy zdarzeń audytowych używane w aplikacji.
  */
 public enum AuditEventType {
-    STAGE_WEIGHTS_CHANGED,
     STAGE_DEADLINES_CHANGED,
     GRADE_CANCELLED,
     GRADES_EXPORTED,

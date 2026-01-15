@@ -219,8 +219,6 @@ public class CourseStructureController {
             throw new IllegalStateException("Zmiana przekroczy 100% wag");
         }
 
-        // Zapamiętaj stare wartości do audytu
-        int oldWeight = stage.getWeightPercent();
         var oldSoft = stage.getSoftDeadline();
         var oldHard = stage.getHardDeadline();
 
@@ -233,22 +231,6 @@ public class CourseStructureController {
                 request.penaltyMaxMPercent()
         );
         Stage saved = stageRepository.save(stage);
-
-        // Audyt zmian wag etapów
-        if (oldWeight != saved.getWeightPercent()) {
-            auditService.log(
-                    AuditEventType.STAGE_WEIGHTS_CHANGED,
-                    user != null ? user.getId() : null,
-                    String.format(
-                            "{\"taskId\":%d,\"stageId\":%d,\"oldWeight\":%d,\"newWeight\":%d,\"changedBy\":%s}",
-                            saved.getTask().getId(),
-                            saved.getId(),
-                            oldWeight,
-                            saved.getWeightPercent(),
-                            user != null ? user.getId() : "null"
-                    )
-            );
-        }
 
         // Audyt zmian terminów
         boolean deadlinesChanged = (oldSoft == null ? request.softDeadline() != null : !oldSoft.equals(request.softDeadline()))
