@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { API_URL, apiFetch } from "../lib/api";
 import { Toast } from "../components/Toast";
 
@@ -50,6 +50,7 @@ const TeacherHeader = ({
   notificationsOpen,
   onToggleNotifications,
   unreadCount,
+  dropdownRef,
 }: {
   contrastMode: "normal" | "high1" | "high2";
   setContrastMode: (v: "normal" | "high1" | "high2") => void;
@@ -57,6 +58,7 @@ const TeacherHeader = ({
   notificationsOpen: boolean;
   onToggleNotifications: () => void;
   unreadCount: number;
+  dropdownRef: RefObject<HTMLDivElement>;
 }) => (
   <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
     <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
@@ -546,6 +548,7 @@ export default function OcenianiePage() {
         notificationsOpen={notificationsOpen}
         onToggleNotifications={() => setNotificationsOpen((v) => !v)}
         unreadCount={unreadTeacherNotifications.length}
+        dropdownRef= {dropdownRef}
       />
       <div className="mx-auto max-w-7xl px-5 py-6 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">

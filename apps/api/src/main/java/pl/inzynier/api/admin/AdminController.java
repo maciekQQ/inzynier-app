@@ -121,7 +121,7 @@ public class AdminController {
         List<ParsedCsvRow> validRows = new ArrayList<>();
         Set<String> seenAlbums = new HashSet<>();
         Set<String> existingAlbums = courseStudentRepository.findByCourseId(courseId).stream()
-                .map(CourseStudent::getAlbumNumber)
+                .map(ClassGroupStudent::getAlbumNumber)
                 .filter(Objects::nonNull)
                 .collect(java.util.stream.Collectors.toSet());
 
