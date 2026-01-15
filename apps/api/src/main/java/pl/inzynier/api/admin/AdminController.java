@@ -8,6 +8,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import com.opencsv.CSVReader;
+import com.opencsv.exceptions.CsvValidationException;
 import java.io.InputStreamReader;
 import java.io.IOException;
 import pl.inzynier.api.admin.dto.AssignTeacherRequest;
@@ -113,7 +114,7 @@ public class AdminController {
     @PostMapping("/courses/{courseId}/students/import-csv")
     public ResponseEntity<?> importStudentsCsv(@PathVariable Long courseId,
                                                @RequestParam("file") MultipartFile file,
-                                               @AuthenticationPrincipal User admin) throws IOException {
+                                               @AuthenticationPrincipal User admin) throws IOException, CsvValidationException {
         ClassGroup course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new IllegalArgumentException("Course not found"));
 
