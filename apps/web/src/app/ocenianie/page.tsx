@@ -747,7 +747,7 @@ export default function OcenianiePage() {
                 </p>
               </div>
 
-              <div className="grid gap-3 text-sm md:grid-cols-2">
+              <div className="grid gap-3 text-sm md:grid-cols-3">
                 <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
                   <p className="text-xs text-slate-500">Punkty wpisane (ostatnie)</p>
                   <p className="font-semibold text-slate-900">
@@ -755,7 +755,15 @@ export default function OcenianiePage() {
                   </p>
                 </div>
                 <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
-                  <p className="text-xs text-slate-500">Kara za spóźnienie</p>
+                  <p className="text-xs text-slate-500">
+                    Sugerowane punkty (uwzględniając ewentualne spóźnienie)
+                  </p>
+                  <p className="font-semibold text-slate-900">
+                    {selectedEntry.lastPointsNetto != null ? selectedEntry.lastPointsNetto : "—"}
+                  </p>
+                </div>
+                <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
+                  <p className="text-xs text-slate-500">Termin oddania</p>
                   <div className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${lateBadge.className}`}>
                     {lateBadge.label}
                   </div>
