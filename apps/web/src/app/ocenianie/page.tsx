@@ -561,7 +561,6 @@ export default function OcenianiePage() {
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500 font-semibold">Ocena prac</p>
           <h1 className="text-2xl font-bold text-slate-900">Panel oceniania</h1>
-          <p className="text-sm text-slate-600 mt-1">Logika bez zmian: wybierz grupę, filtruj zadania, oceń.</p>
         </div>
         <div className="flex items-center gap-2 text-xs rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
           <label className="font-semibold text-slate-700">Grupa</label>
