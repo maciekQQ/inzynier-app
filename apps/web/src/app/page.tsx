@@ -1,6 +1,6 @@
- "use client";
+"use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { API_URL, apiFetch } from "./lib/api";
 import { Toast } from "./components/Toast";
 
@@ -207,7 +207,9 @@ export default function Home() {
             <h1 className="text-2xl font-bold text-slate-900">
               Panel dydaktyczny
             </h1>
+          {(!token || !profile) && (
             <p className="text-sm text-slate-600">Zaloguj się, aby korzystać z panelu.</p>
+          )}
           </div>
           <div className="flex items-center gap-2 flex-wrap" aria-live="polite">
             <span
@@ -471,6 +473,8 @@ function AdminView({ token }: { token: string }) {
     groupId: "",
     csv: "albumNumber,firstName,lastName,email\nA100,Jan,Student,jan.student@example.com",
   });
+  const fileInputCsv = useRef<HTMLInputElement | null>(null);
+  const [csvFileName, setCsvFileName] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   
   // Listy rozwijane
@@ -607,6 +611,14 @@ function AdminView({ token }: { token: string }) {
     } catch (e) {
       setMsg("Błąd: " + (e as Error).message);
     }
+  };
+
+  const handleCsvFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    setCsvForm((f) => ({ ...f, csv: text }));
+    setCsvFileName(file.name);
   };
 
   const handleImportCsv = async () => {
@@ -863,6 +875,13 @@ function AdminView({ token }: { token: string }) {
         <p className="mt-1 text-xs text-slate-600">Prześlij listę studentów w formacie CSV.</p>
         <div className="mt-3 grid gap-3 lg:grid-cols-3">
           <div className="space-y-2 text-sm">
+            <input
+              ref={fileInputCsv}
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={handleCsvFileChange}
+            />
             <select
               className="w-full rounded border px-3 py-2"
               value={csvForm.groupId}
@@ -884,6 +903,18 @@ function AdminView({ token }: { token: string }) {
                 A100,Jan,Kowalski,jan.k@example.com
               </span>
             </p>
+            <button
+              onClick={() => fileInputCsv.current?.click()}
+              className="w-full rounded-md border border-indigo-200 bg-white px-3 py-2 text-sm font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50"
+              type="button"
+            >
+              Wybierz plik CSV
+            </button>
+            {csvFileName ? (
+              <p className="text-xs text-slate-600" aria-live="polite">
+                Wybrano: {csvFileName}
+              </p>
+            ) : null}
             <button
               onClick={handleImportCsv}
               className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
