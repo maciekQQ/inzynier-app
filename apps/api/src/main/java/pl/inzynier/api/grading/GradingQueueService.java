@@ -54,6 +54,7 @@ public class GradingQueueService {
 
         Optional<ClassGroupStudent> courseStudent = courseStudentRepository.findByCourseIdAndStudentId(course.getId(), revision.getStudentId());
         Optional<StageExemption> exemption = stageExemptionRepository.findByStageIdAndStudentId(stage.getId(), revision.getStudentId());
+        Optional<User> studentUser = userRepository.findById(revision.getStudentId());
         Instant soft = exemption.map(StageExemption::getCustomSoft).orElse(stage.getSoftDeadline());
         Instant hard = exemption.map(StageExemption::getCustomHard).orElse(stage.getHardDeadline());
         boolean allowAfterHard = exemption.map(StageExemption::isAllowAfterHard).orElse(false);
@@ -72,10 +73,9 @@ public class GradingQueueService {
         entry.setStageId(stage.getId());
         entry.setTaskId(task.getId());
         entry.setCourseId(course.getId());
-        entry.setAlbumNumber(courseStudent.map(ClassGroupStudent::getAlbumNumber).orElse(null));
-        entry.setStudentName(courseStudent.flatMap(cs -> userRepository.findById(cs.getStudentId()))
-                .map(u -> u.getFirstName() + " " + u.getLastName())
-                .orElse(null));
+        String album = courseStudent.map(ClassGroupStudent::getAlbumNumber).orElseGet(() -> studentUser.map(User::getAlbumNumber).orElse(null));
+        entry.setAlbumNumber(album);
+        entry.setStudentName(studentUser.map(u -> u.getFirstName() + " " + u.getLastName()).orElse(null));
         entry.setLastRevisionId(revision.getId());
         entry.setLastRevisionStatus(revision.getStatus());
         entry.setLastSubmittedAt(revision.getCreatedAt());

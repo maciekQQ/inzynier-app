@@ -227,13 +227,14 @@ public class GradingQueueController {
             var task = taskRepository.findById(e.getTaskId()).orElse(null);
             var stage = stageRepository.findById(e.getStageId()).orElse(null);
             var artifact = artifactRepository.findById(e.getId().getArtifactId()).orElse(null);
+            String albumNumber = resolveAlbum(e.getCourseId(), e.getId().getStudentId(), e.getAlbumNumber());
             return new GradingQueueTeacherViewDto(
                     e.getId().getArtifactId(),
                     e.getStageId(),
                     e.getTaskId(),
                     e.getCourseId(),
                     e.getId().getStudentId(),
-                    e.getAlbumNumber(),
+                    albumNumber,
                     e.getStudentName(),
                     task != null ? task.getTitle() : null,
                     stage != null ? stage.getName() : null,
@@ -272,13 +273,14 @@ public class GradingQueueController {
                         if (existingKeys.contains(key)) continue; // już jest wpis z oddaniem
                         var cs = courseStudentRepository.findByCourseIdAndStudentId(task.getCourse().getId(), studentId).orElse(null);
                         var user = userRepository.findById(studentId).orElse(null);
+                        String albumNumber = resolveAlbum(task.getCourse().getId(), studentId, cs != null ? cs.getAlbumNumber() : null);
                         dto.add(new GradingQueueTeacherViewDto(
                                 artifact.getId(),
                                 stage.getId(),
                                 task.getId(),
                                 task.getCourse().getId(),
                                 studentId,
-                                cs != null ? cs.getAlbumNumber() : null,
+                                albumNumber,
                                 user != null ? (user.getFirstName() + " " + user.getLastName()) : null,
                                 task.getTitle(),
                                 stage.getName(),
@@ -298,6 +300,17 @@ public class GradingQueueController {
         }
 
         return ResponseEntity.ok(dto);
+    }
+
+    private String resolveAlbum(Long courseId, Long studentId, String existing) {
+        if (existing != null && !existing.isBlank()) return existing;
+        var cs = courseStudentRepository.findByCourseIdAndStudentId(courseId, studentId).orElse(null);
+        if (cs != null && cs.getAlbumNumber() != null && !cs.getAlbumNumber().isBlank()) {
+            return cs.getAlbumNumber();
+        }
+        return userRepository.findById(studentId)
+                .map(pl.inzynier.api.user.User::getAlbumNumber)
+                .orElse(null);
     }
 }
 
