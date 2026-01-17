@@ -367,7 +367,7 @@ export default function MaterialyPage() {
             <p className="text-xs uppercase tracking-[0.2em] text-slate-500 font-semibold">Edycja</p>
             <h1 className="text-3xl font-bold text-slate-900">Edycja zadań</h1>
             <p className="text-sm text-slate-600 mt-1">
-              Edytuj nazwę, opis, terminy i materiały. Tryb oceniania bez zmian; termin preferowany blokuje się po pierwszym oddaniu.
+              Edytuj nazwę, opis, terminy i materiały. Termin preferowany blokuje się po pierwszym oddaniu.
             </p>
           </div>
           <div className="flex items-center gap-2 text-xs rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
